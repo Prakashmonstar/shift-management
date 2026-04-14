@@ -100,7 +100,7 @@ mongoose.connect(process.env.MONGO_URI)
     console.log('✅ MongoDB connected:', process.env.MONGO_URI)
     await autoSeed()  // ← Seeds automatically on first run
     app.listen(PORT, () => {
-      console.log(`\n🚀 ShiftApp Pro running on http://localhost:${PORT}`)
+      console.log(`🚀 ShiftApp Pro running on PORT ${PORT}`)
       console.log(`📋 Open frontend:  http://localhost:5173`)
       console.log(`🔑 Admin login:    admin@shift.com / admin123\n`)
     })
