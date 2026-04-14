@@ -94,21 +94,22 @@ async function autoSeed() {
 
 // ── MongoDB connection + start ────────────────────────────────
 const PORT = process.env.PORT || 5000
+const MONGO_URI = process.env.MONGO_URI
 
-mongoose.connect(process.env.MONGO_URI)
+if (!MONGO_URI) {
+  console.error("❌ MONGO_URI not found in environment variables")
+  process.exit(1)
+}
+
+mongoose.connect(MONGO_URI)
   .then(async () => {
-    console.log('✅ MongoDB connected:', process.env.MONGO_URI)
-    await autoSeed()  // ← Seeds automatically on first run
+    console.log('✅ MongoDB connected')
+    await autoSeed()
     app.listen(PORT, () => {
       console.log(`🚀 ShiftApp Pro running on PORT ${PORT}`)
-      console.log(`📋 Open frontend:  http://localhost:5173`)
-      console.log(`🔑 Admin login:    admin@shift.com / admin123\n`)
     })
   })
   .catch(err => {
     console.error('❌ MongoDB connection failed:', err.message)
-    console.error('\n💡 Fix: Make sure MongoDB is running!')
-    console.error('   Windows: net start MongoDB')
-    console.error('   Mac/Linux: mongod\n')
     process.exit(1)
   })
