@@ -4,9 +4,9 @@
   "private": true,
   "main": "index.js",
   "scripts": {
-    "build": "remix vite:build",
-  "dev": "remix vite:dev",
-  "start": "remix-serve build"
+    "dev": "nodemon index.js",
+    "start": "node index.js"
+    
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
