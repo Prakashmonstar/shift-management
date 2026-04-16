@@ -18,6 +18,7 @@ export const SHIFT_TYPES = {
   COMP: { label: 'Comp Off',             start: null,    end: null,    minAgents: 0, category: 'Off',       color: '#dc2626', textColor: '#fff' },
   LEAVE:{ label: 'Leave',               start: null,    end: null,    minAgents: 0, category: 'Off',       color: '#ea580c', textColor: '#fff' },
   OFF:  { label: 'Casual Leave',      start: null,    end: null,    minAgents: 0, category: 'Off',       color: '#6b7280', textColor: '#fff' },
+
   OFF:  { label: 'Week Off',            start: null,    end: null,    minAgents: 0, category: 'Off',       color: '#6b7280', textColor: '#fff' },
 }
 
