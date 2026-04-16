@@ -17,7 +17,7 @@ export const SHIFT_TYPES = {
   S5:   { label: '10:30 PM – 7:00 AM',  start: '22:30', end: '07:00', minAgents: 1, category: 'Night',     color: '#374151', textColor: '#fff' },
   COMP: { label: 'Comp Off',             start: null,    end: null,    minAgents: 0, category: 'Off',       color: '#dc2626', textColor: '#fff' },
   LEAVE:{ label: 'Leave',               start: null,    end: null,    minAgents: 0, category: 'Off',       color: '#ea580c', textColor: '#fff' },
-  OFF:  { label: 'Casual Leave',      start: null,    end: null,    minAgents: 0, category: 'Off',       color: '#6b7280', textColor: '#fff' },
+    OFF:  { label: 'Casual Leave',      start: null,    end: null,    minAgents: 0, category: 'Off',       color: '#6b7280', textColor: '#fff' },
 
   OFF:  { label: 'Week Off',            start: null,    end: null,    minAgents: 0, category: 'Off',       color: '#6b7280', textColor: '#fff' },
 }
