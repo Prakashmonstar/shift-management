@@ -7,8 +7,9 @@ export const SHIFT_TYPES = {
   MC:   { label: '7:00 AM - 3:30 PM - Call',      start: '07:00', end: '15:30', minAgents: 4, category: 'Morning',   color: '#16a34a', textColor: '#fff' },
   MR:   { label: '7:00 AM - 3:30 PM - Reporting',    start: '07:00', end: '15:30', minAgents: 2, category: 'Morning',   color: '#15803d', textColor: '#fff' },
   S4:   { label: '9:00 AM – 5:30 PM',   start: '09:00', end: '17:30', minAgents: 2, category: 'General',   color: '#0891b2', textColor: '#fff' },
-  AC:   { label: '11:30 AM - 9:00 PM - Call',        start: '11:30', end: '20:00', minAgents: 7, category: 'Afternoon', color: '#2563eb', textColor: '#fff' },
-  AR:   { label: '11:30 AM - 9:00 PM - Reporting',      start: '11:30', end: '20:00', minAgents: 2, category: 'Afternoon', color: '#1d4ed8', textColor: '#fff' },
+  AC:   { label: '11:00 AM - 7:30 PM - Call',        start: '11:00', end: '19:30', minAgents: 7, category: 'Afternoon', color: '#2563eb', textColor: '#fff' },
+  AC:   { label: '11:30 AM - 8:00 PM - Call',        start: '11:30', end: '20:00', minAgents: 7, category: 'Afternoon', color: '#2563eb', textColor: '#fff' },
+  AR:   { label: '11:30 AM - 8:00 PM - Reporting',      start: '11:30', end: '20:00', minAgents: 2, category: 'Afternoon', color: '#1d4ed8', textColor: '#fff' },
   S6:   { label: '12:30 PM – 9:00 PM',  start: '12:30', end: '21:00', minAgents: 2, category: 'Afternoon', color: '#b45309', textColor: '#fff' },
   EC:   { label: '2:30 PM - 11:00 PM - Call',      start: '14:30', end: '23:00', minAgents: 3, category: 'Evening',   color: '#7c3aed', textColor: '#fff' },
   ER:   { label: '2:30 PM - 11:00 PM - Reporting',    start: '14:30', end: '23:00', minAgents: 1, category: 'Evening',   color: '#6d28d9', textColor: '#fff' },
@@ -16,8 +17,10 @@ export const SHIFT_TYPES = {
   S5:   { label: '10:30 PM – 7:00 AM',  start: '22:30', end: '07:00', minAgents: 1, category: 'Night',     color: '#374151', textColor: '#fff' },
   COMP: { label: 'Comp Off',             start: null,    end: null,    minAgents: 0, category: 'Off',       color: '#dc2626', textColor: '#fff' },
   LEAVE:{ label: 'Leave',               start: null,    end: null,    minAgents: 0, category: 'Off',       color: '#ea580c', textColor: '#fff' },
+  OFF:  { label: 'Casual Leave',      start: null,    end: null,    minAgents: 0, category: 'Off',       color: '#6b7280', textColor: '#fff' },
   OFF:  { label: 'Week Off',            start: null,    end: null,    minAgents: 0, category: 'Off',       color: '#6b7280', textColor: '#fff' },
 }
+
 
 
 export const otpStore = {}
