@@ -6,7 +6,7 @@
 export const SHIFT_TYPES = {
   MC:   { label: '7:00 AM - 3:30 PM - Call',      start: '07:00', end: '15:30', minAgents: 4, category: 'Morning',   color: '#16a34a', textColor: '#fff' },
   MR:   { label: '7:00 AM - 3:30 PM - Reporting',    start: '07:00', end: '15:30', minAgents: 2, category: 'Morning',   color: '#15803d', textColor: '#fff' },
-  S4:   { label: '9:00 AM – 5:30 PM',   start: '09:00', end: '17:30', minAgents: 2, category: 'General',   color: '#0891b2', textColor: '#fff' },
+  S4:   { label: '9:00 AM – 5:30 PM ',   start: '09:00', end: '17:30', minAgents: 2, category: 'General',   color: '#0891b2', textColor: '#fff' },
   AC:   { label: '11:00 AM - 7:30 PM - Call',        start: '11:00', end: '19:30', minAgents: 7, category: 'Afternoon', color: '#2563eb', textColor: '#fff' },
   AC:   { label: '11:30 AM - 8:00 PM - Call',        start: '11:30', end: '20:00', minAgents: 7, category: 'Afternoon', color: '#2563eb', textColor: '#fff' },
   AR:   { label: '11:30 AM - 8:00 PM - Reporting',      start: '11:30', end: '20:00', minAgents: 2, category: 'Afternoon', color: '#1d4ed8', textColor: '#fff' },
