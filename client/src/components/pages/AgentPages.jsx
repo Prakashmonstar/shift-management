@@ -1,15 +1,15 @@
-// client/src/components/pages/AgentPages.jsx
 import React, { useState, useEffect } from 'react'
 import {
   SHIFT_TYPES, getWeekDates, getDayName, formatDate,
   getCurrentWeekKey, getNextWeekKey, getPrevWeekKey,
-  applyLeave, cancelLeave, submitShiftRequest,
+  applyLeave, cancelLeave, submitShiftRequest, cancelShiftRequest,
 } from '../../data/store'
 
-// ─── My Schedule (VIEW ONLY) ──────────────────────────────────
+// ─── My Schedule ──────────────────────────────────────────────
 export function MySchedule({ user, storeData }) {
   const { leaves, scheduleCache, loadSchedule } = storeData
   const [weekKey, setWeekKey] = useState(getCurrentWeekKey)
+  const [lastRefresh, setLastRefresh] = useState(new Date())
 
   useEffect(() => { loadSchedule(weekKey) }, [weekKey])
 
@@ -31,6 +31,11 @@ export function MySchedule({ user, storeData }) {
     return `${d1.toLocaleDateString('en-GB',{day:'numeric',month:'short'})} – ${d2.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}`
   }
 
+  const handleRefresh = () => {
+    loadSchedule(weekKey)
+    setLastRefresh(new Date())
+  }
+
   const totalWork  = dates.filter(d=>{ const c=getCell(d); return c!=='OFF'&&c!=='LEAVE'&&c!=='COMP' }).length
   const totalOff   = dates.filter(d=>getCell(d)==='OFF').length
   const totalLeave = dates.filter(d=>getCell(d)==='LEAVE').length
@@ -41,23 +46,27 @@ export function MySchedule({ user, storeData }) {
         <div>
           <h1>My Schedule</h1>
           <p className="sub">
-            <span className="empid">{user.employeeId}</span> &nbsp;·&nbsp;
+            <span className="empid">{user.employeeId}</span>&nbsp;·&nbsp;
             <span className={`status-tag status-${status}`}>{status}</span>
-            &nbsp;·&nbsp; View only — use "Request Shift" to request changes
+            &nbsp;·&nbsp;Auto-refreshes every 30s · Last: {lastRefresh.toLocaleTimeString()}
           </p>
         </div>
+        <button className="btn btn-sm btn-outline" onClick={handleRefresh}>🔄 Refresh</button>
       </div>
+
       <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16}}>
         <button className="btn btn-sm" onClick={()=>setWeekKey(getPrevWeekKey(weekKey))}>← Prev</button>
         <span className="week-lbl">📅 {weekLabel()}</span>
         <button className="btn btn-sm" onClick={()=>setWeekKey(getNextWeekKey(weekKey))}>Next →</button>
       </div>
+
       <div className="metrics-grid" style={{marginBottom:16}}>
         <div className="metric-card" style={{'--mc':'var(--blue)'}}><div className="mc-icon">💼</div><div className="mc-val" style={{color:'var(--blue)'}}>{totalWork}</div><div className="mc-label">Work Days</div></div>
         <div className="metric-card" style={{'--mc':'#6b7280'}}><div className="mc-icon">😴</div><div className="mc-val">{totalOff}</div><div className="mc-label">Days Off</div></div>
         <div className="metric-card" style={{'--mc':'var(--amber)'}}><div className="mc-icon">🌿</div><div className="mc-val" style={{color:'var(--amber)'}}>{totalLeave}</div><div className="mc-label">Leave Days</div></div>
         <div className="metric-card" style={{'--mc':'var(--purple)'}}><div className="mc-icon">⏱</div><div className="mc-val" style={{fontSize:12,color:'var(--purple)',marginTop:6}}>{status}</div><div className="mc-label">Week Status</div></div>
       </div>
+
       <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:10}}>
         {dates.map(dateStr=>{
           const code=getCell(dateStr)
@@ -79,6 +88,7 @@ export function MySchedule({ user, storeData }) {
           )
         })}
       </div>
+
       <div style={{marginTop:16,display:'flex',gap:8,flexWrap:'wrap'}}>
         {Object.entries(SHIFT_TYPES).map(([k,d])=>(
           <div key={k} style={{display:'flex',alignItems:'center',gap:4,fontSize:11}}>
@@ -102,10 +112,11 @@ export function ShiftRequestForm({ user, toast, storeData }) {
 
   useEffect(()=>{ if(!cached) loadSchedule(weekKey) },[weekKey])
 
-  const [form, setForm] = useState({ dateStr:dates[0]||'', requestedShift:'', reason:'' })
-  const [err,  setErr]  = useState('')
-  const [done, setDone] = useState(false)
+  const [form,   setForm]   = useState({ dateStr:dates[0]||'', requestedShift:'', reason:'' })
+  const [err,    setErr]    = useState('')
+  const [done,   setDone]   = useState(false)
   const [saving, setSaving] = useState(false)
+  const [filterStatus, setFilterStatus] = useState('all')
 
   const getCurrentShift = (dateStr) => {
     const onLeave=myLeaves.some(l=>dateStr>=l.from&&dateStr<=l.to)
@@ -115,6 +126,7 @@ export function ShiftRequestForm({ user, toast, storeData }) {
 
   const currentShift = getCurrentShift(form.dateStr)
   const myReqs = requests.filter(r=>r.userId===uid)
+  const shownReqs = filterStatus==='all' ? myReqs : myReqs.filter(r=>r.status===filterStatus)
 
   const submit = async (e) => {
     e.preventDefault(); setErr('')
@@ -129,6 +141,15 @@ export function ShiftRequestForm({ user, toast, storeData }) {
       setDone(true)
     } catch(e) { setErr(e.message) }
     setSaving(false)
+  }
+
+  const handleCancel = async (id) => {
+    if (!window.confirm('Cancel this request?')) return
+    try {
+      await cancelShiftRequest(id)
+      toast('Request cancelled','warning')
+      await refreshRequests()
+    } catch(e) { toast(e.message,'danger') }
   }
 
   if (done) return (
@@ -172,22 +193,31 @@ export function ShiftRequestForm({ user, toast, storeData }) {
             </div>
             <div className="form-group"><label>Reason for Change *</label>
               <textarea rows={4} placeholder="Please provide a clear reason…" value={form.reason} onChange={e=>setForm(p=>({...p,reason:e.target.value}))} required/>
-              {!form.reason.trim()&&<small style={{color:'var(--red)',fontSize:11}}>* Reason is mandatory</small>}
             </div>
             <button type="submit" className="btn btn-primary btn-full" disabled={!form.requestedShift||!form.reason.trim()||saving}>
               {saving?'Submitting…':'📤 Submit Request to Admin'}
             </button>
           </form>
         </div>
+
         <div className="card">
           <div className="card-title">My Previous Requests</div>
-          {myReqs.length===0
-            ? <div style={{color:'var(--t3)',fontSize:13,textAlign:'center',padding:20}}>No requests submitted yet</div>
-            : myReqs.map(r=>(
+          {/* Status filter tabs */}
+          <div style={{display:'flex',gap:6,marginBottom:12,flexWrap:'wrap'}}>
+            {['all','pending','approved','rejected','cancelled'].map(s=>(
+              <button key={s} className={`btn btn-xs ${filterStatus===s?'btn-primary':'btn-outline'}`}
+                onClick={()=>setFilterStatus(s)} style={{textTransform:'capitalize',fontSize:11}}>
+                {s}{s!=='all'&&` (${myReqs.filter(r=>r.status===s).length})`}
+              </button>
+            ))}
+          </div>
+          {shownReqs.length===0
+            ? <div style={{color:'var(--t3)',fontSize:13,textAlign:'center',padding:20}}>No requests found</div>
+            : shownReqs.map(r=>(
               <div key={r.id} className={`req-card req-${r.status}`} style={{marginBottom:8}}>
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
                   <span style={{fontWeight:700,fontSize:13}}>{getDayName(r.dateStr)} · {new Date(r.dateStr).toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</span>
-                  <span className={`badge badge-${r.status==='approved'?'green':r.status==='rejected'?'red':'amber'}`}>{r.status}</span>
+                  <span className={`badge badge-${r.status==='approved'?'green':r.status==='rejected'?'red':r.status==='cancelled'?'gray':'amber'}`}>{r.status}</span>
                 </div>
                 <div style={{fontSize:12,color:'var(--t2)',marginBottom:4}}>
                   <span style={{background:SHIFT_TYPES[r.currentShift]?.color,color:SHIFT_TYPES[r.currentShift]?.textColor,padding:'1px 6px',borderRadius:4,fontSize:11,fontWeight:600}}>{r.currentShift}</span>
@@ -196,7 +226,12 @@ export function ShiftRequestForm({ user, toast, storeData }) {
                 </div>
                 <div style={{fontSize:11,color:'var(--t3)',fontStyle:'italic'}}>"{r.reason}"</div>
                 {r.adminNote&&<div style={{fontSize:11,color:'var(--green)',marginTop:4}}>Admin: {r.adminNote}</div>}
-                <div style={{fontSize:10,color:'var(--t3)',marginTop:4}}>{r.submittedAt?.slice(0,16)}</div>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:4}}>
+                  <span style={{fontSize:10,color:'var(--t3)'}}>{r.submittedAt?.slice(0,16)}</span>
+                  {r.status==='pending'&&(
+                    <button className="btn btn-xs btn-outline" onClick={()=>handleCancel(r.id)} style={{fontSize:10}}>⊘ Cancel</button>
+                  )}
+                </div>
               </div>
             ))
           }
@@ -210,8 +245,8 @@ export function ShiftRequestForm({ user, toast, storeData }) {
 export function ApplyLeave({ user, toast, onRefresh, storeData }) {
   const { refreshLeaves } = storeData
   const today = new Date().toISOString().slice(0,10)
-  const [form, setForm] = useState({ leaveType:'Casual', from:today, to:today, reason:'' })
-  const [err,  setErr]  = useState('')
+  const [form,   setForm]   = useState({ leaveType:'Casual', from:today, to:today, reason:'' })
+  const [err,    setErr]    = useState('')
   const [saving, setSaving] = useState(false)
 
   const days = () => { const d=Math.ceil((new Date(form.to)-new Date(form.from))/86400000)+1; return d>0?d:0 }
@@ -219,7 +254,7 @@ export function ApplyLeave({ user, toast, onRefresh, storeData }) {
   const submit = async (e) => {
     e.preventDefault(); setErr('')
     if (!form.reason.trim()) { setErr('Please provide a reason'); return }
-    if (form.to<form.from)   { setErr('End date must be after start'); return }
+    if (form.to < form.from) { setErr('End date must be after start'); return }
     setSaving(true)
     try {
       await applyLeave({ userId:user._id||user.id, ...form })
@@ -252,7 +287,6 @@ export function ApplyLeave({ user, toast, onRefresh, storeData }) {
             </div>}
             <div className="form-group"><label>Reason *</label>
               <textarea rows={3} value={form.reason} onChange={e=>setForm(p=>({...p,reason:e.target.value}))} placeholder="Brief reason for leave…" required/>
-              {!form.reason.trim()&&<small style={{color:'var(--red)',fontSize:11}}>* Reason is mandatory</small>}
             </div>
             <button type="submit" className="btn btn-primary btn-full" disabled={!form.reason.trim()||saving}>
               {saving?'Submitting…':'Submit Application'}
@@ -278,6 +312,9 @@ export function MyLeaves({ user, toast, onRefresh, storeData }) {
   const { leaves, refreshLeaves } = storeData
   const uid = user._id || user.id
   const myLeaves = leaves.filter(l=>l.userId===uid)
+  const [filterStatus, setFilterStatus] = useState('all')
+
+  const shown = filterStatus==='all' ? myLeaves : myLeaves.filter(l=>l.status===filterStatus)
 
   const cancel = async (id) => {
     if (!window.confirm('Cancel this leave request?')) return
@@ -292,38 +329,60 @@ export function MyLeaves({ user, toast, onRefresh, storeData }) {
     <div className="page">
       <div className="page-hd"><h1>My Leave Requests</h1></div>
       <div className="metrics-grid" style={{marginBottom:16}}>
-        {['pending','approved','rejected'].map(s=>(
-          <div key={s} className="metric-card" style={{'--mc':s==='approved'?'var(--green)':s==='rejected'?'var(--red)':'var(--amber)'}}>
-            <div className="mc-val" style={{color:s==='approved'?'var(--green)':s==='rejected'?'var(--red)':'var(--amber)'}}>{myLeaves.filter(l=>l.status===s).length}</div>
+        {['pending','approved','rejected','cancelled'].map(s=>(
+          <div key={s} className="metric-card" style={{'--mc':s==='approved'?'var(--green)':s==='rejected'?'var(--red)':s==='cancelled'?'#6b7280':'var(--amber)'}}>
+            <div className="mc-val" style={{color:s==='approved'?'var(--green)':s==='rejected'?'var(--red)':s==='cancelled'?'#6b7280':'var(--amber)'}}>
+              {myLeaves.filter(l=>l.status===s).length}
+            </div>
             <div className="mc-label" style={{textTransform:'capitalize'}}>{s}</div>
           </div>
         ))}
-        <div className="metric-card" style={{'--mc':'var(--blue)'}}><div className="mc-val">{myLeaves.length}</div><div className="mc-label">Total</div></div>
       </div>
-      <div className="card card-np">
-        <div className="tbl-wrap">
-          <table>
-            <thead><tr><th>Type</th><th>From</th><th>To</th><th>Days</th><th>Reason</th><th>Status</th><th>Applied</th><th>Actions</th></tr></thead>
-            <tbody>
-              {myLeaves.length===0&&<tr><td colSpan="8" style={{textAlign:'center',padding:32,color:'var(--t3)'}}>No leave requests yet</td></tr>}
-              {[...myLeaves].reverse().map(l=>{
-                const days=Math.ceil((new Date(l.to)-new Date(l.from))/86400000)+1
-                return (
-                  <tr key={l.id}>
-                    <td><span className="badge badge-blue">{l.leaveType}</span></td>
-                    <td style={{fontSize:12}}>{l.from}</td><td style={{fontSize:12}}>{l.to}</td>
-                    <td style={{fontWeight:700}}>{days}</td>
-                    <td style={{maxWidth:130,fontSize:12}}>{l.reason}</td>
-                    <td><span className={`badge badge-${l.status==='approved'?'green':l.status==='rejected'?'red':'amber'}`}>{l.status}</span></td>
-                    <td style={{fontSize:11,color:'var(--t2)'}}>{l.appliedAt?.slice(0,10)}</td>
-                    <td>{l.status==='pending'&&<button className="btn btn-xs btn-danger" onClick={()=>cancel(l.id)}>Cancel</button>}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+
+      {/* Filter tabs */}
+      <div style={{display:'flex',gap:6,marginBottom:12,flexWrap:'wrap'}}>
+        {['all','pending','approved','rejected','cancelled'].map(s=>(
+          <button key={s} className={`btn btn-xs ${filterStatus===s?'btn-primary':'btn-outline'}`}
+            onClick={()=>setFilterStatus(s)} style={{textTransform:'capitalize',fontSize:11}}>
+            {s}{s!=='all'&&` (${myLeaves.filter(l=>l.status===s).length})`}
+          </button>
+        ))}
+      </div>
+
+      {shown.length===0
+        ? <div className="empty-state">No {filterStatus==='all'?'':filterStatus} leave requests.</div>
+        : <div className="card card-np">
+          <div className="tbl-wrap">
+            <table>
+              <thead><tr><th>Type</th><th>From</th><th>To</th><th>Days</th><th>Reason</th><th>Status</th><th>Applied</th><th>Actions</th></tr></thead>
+              <tbody>
+                {shown.map(l=>{
+                  const days=Math.ceil((new Date(l.to)-new Date(l.from))/86400000)+1
+                  return (
+                    <tr key={l.id}>
+                      <td><span className="badge badge-blue">{l.leaveType}</span></td>
+                      <td style={{fontSize:12}}>{l.from}</td>
+                      <td style={{fontSize:12}}>{l.to}</td>
+                      <td style={{fontWeight:700}}>{days}</td>
+                      <td style={{fontSize:12,maxWidth:140}}>{l.reason}</td>
+                      <td>
+                        <span className={`badge badge-${l.status==='approved'?'green':l.status==='rejected'?'red':l.status==='cancelled'?'gray':'amber'}`}>{l.status}</span>
+                        {l.remark&&<div style={{fontSize:10,color:'var(--t3)',marginTop:2}}>{l.remark}</div>}
+                      </td>
+                      <td style={{fontSize:11,color:'var(--t2)'}}>{l.appliedAt?.slice(0,10)}</td>
+                      <td>
+                        {l.status==='pending'&&(
+                          <button className="btn btn-xs btn-danger" onClick={()=>cancel(l.id)}>⊘ Cancel</button>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      }
     </div>
   )
 }

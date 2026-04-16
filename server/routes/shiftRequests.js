@@ -1,4 +1,3 @@
-// server/routes/shiftRequests.js
 const router       = require('express').Router()
 const ShiftRequest = require('../models/ShiftRequest')
 const Schedule     = require('../models/Schedule')
@@ -6,65 +5,60 @@ const { protect, adminOnly } = require('../middleware/auth')
 
 router.use(protect)
 
-// ── GET /api/shift-requests ───────────────────────────────────
 router.get('/', async (req, res) => {
   try {
     let query = {}
     if (req.user.role === 'agent') query.userId = req.user._id
-
-    const reqs = await ShiftRequest.find(query)
-      .populate('userId', 'name employeeId dept')
-      .sort({ submittedAt: -1 })
-
+    // Support month filter: ?month=2025-07
+    if (req.query.month) {
+      const [y, m] = req.query.month.split('-')
+      const from = `${y}-${m}-01`
+      const to   = `${y}-${m}-31`
+      query.dateStr = { $gte: from, $lte: to }
+    }
+    const reqs = await ShiftRequest.find(query).populate('userId', 'name employeeId dept').sort({ submittedAt: -1 })
     const result = reqs.map(r => ({
-      id:             r._id.toString(),
-      userId:         r.userId._id.toString(),
-      userName:       r.userId.name,
-      userEmpId:      r.userId.employeeId,
-      userDept:       r.userId.dept,
-      weekKey:        r.weekKey,
-      dateStr:        r.dateStr,
-      currentShift:   r.currentShift,
-      requestedShift: r.requestedShift,
-      reason:         r.reason,
-      status:         r.status,
-      adminNote:      r.adminNote,
-      submittedAt:    r.submittedAt?.toISOString(),
-      actionAt:       r.actionAt?.toISOString(),
+      id: r._id.toString(), userId: r.userId._id.toString(),
+      userName: r.userId.name, userEmpId: r.userId.employeeId, userDept: r.userId.dept,
+      weekKey: r.weekKey, dateStr: r.dateStr,
+      currentShift: r.currentShift, requestedShift: r.requestedShift,
+      reason: r.reason, status: r.status, adminNote: r.adminNote,
+      submittedAt: r.submittedAt?.toISOString(), actionAt: r.actionAt?.toISOString(),
     }))
     res.json({ ok: true, requests: result })
-  } catch (err) {
-    res.status(500).json({ ok: false, msg: err.message })
-  }
+  } catch (err) { res.status(500).json({ ok: false, msg: err.message }) }
 })
 
-// ── POST /api/shift-requests  (agent) ────────────────────────
 router.post('/', async (req, res) => {
   try {
     const { weekKey, dateStr, currentShift, requestedShift, reason } = req.body
     if (!weekKey || !dateStr || !currentShift || !requestedShift || !reason)
       return res.status(400).json({ ok: false, msg: 'All fields required' })
-
-    const sr = await ShiftRequest.create({
-      userId: req.user._id, weekKey, dateStr,
-      currentShift, requestedShift, reason,
-    })
+    const sr = await ShiftRequest.create({ userId: req.user._id, weekKey, dateStr, currentShift, requestedShift, reason })
     res.status(201).json({
       ok: true,
-      request: {
-        id: sr._id.toString(),
-        userId: req.user._id.toString(),
-        weekKey, dateStr, currentShift, requestedShift, reason,
-        status: 'pending',
-        submittedAt: sr.submittedAt?.toISOString(),
-      }
+      request: { id: sr._id.toString(), userId: req.user._id.toString(), weekKey, dateStr, currentShift, requestedShift, reason, status: 'pending', submittedAt: sr.submittedAt?.toISOString() }
     })
-  } catch (err) {
-    res.status(500).json({ ok: false, msg: err.message })
-  }
+  } catch (err) { res.status(500).json({ ok: false, msg: err.message }) }
 })
 
-// ── PUT /api/shift-requests/:id/status  (admin only) ─────────
+// Agent cancel own pending request
+router.delete('/:id', async (req, res) => {
+  try {
+    const sr = await ShiftRequest.findById(req.params.id)
+    if (!sr) return res.status(404).json({ ok: false, msg: 'Request not found' })
+    if (sr.userId.toString() !== req.user._id.toString() && req.user.role !== 'admin')
+      return res.status(403).json({ ok: false, msg: 'Not authorized' })
+    if (sr.status !== 'pending')
+      return res.status(400).json({ ok: false, msg: 'Can only cancel pending requests' })
+    sr.status = 'cancelled'
+    sr.actionAt = new Date()
+    await sr.save()
+    res.json({ ok: true })
+  } catch (err) { res.status(500).json({ ok: false, msg: err.message }) }
+})
+
+// Admin approve/reject — on approve, updates the schedule
 router.put('/:id/status', adminOnly, async (req, res) => {
   try {
     const { status, adminNote } = req.body
@@ -88,9 +82,7 @@ router.put('/:id/status', adminOnly, async (req, res) => {
     }
 
     res.json({ ok: true, request: { id: sr._id.toString(), status: sr.status } })
-  } catch (err) {
-    res.status(500).json({ ok: false, msg: err.message })
-  }
+  } catch (err) { res.status(500).json({ ok: false, msg: err.message }) }
 })
 
 module.exports = router

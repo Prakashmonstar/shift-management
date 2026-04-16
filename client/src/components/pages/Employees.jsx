@@ -1,11 +1,21 @@
-// client/src/components/pages/Employees.jsx
-import React, { useState } from 'react'
-import {
-  SHIFT_TYPES, addUser, updateUser, deleteUser, updateLeaveStatus, changePassword,
-} from '../../data/store'
-import { exportLeavesExcel } from '../../data/excelExport'
+import React, { useState, useRef } from 'react'
+import { SHIFT_TYPES, addUser, updateUser, deleteUser, updateLeaveStatus, changePassword, cancelLeave, updateProfile } from '../../data/store'
+import { exportLeavesExcel, exportMonthlyReportExcel, exportShiftRequestsExcel } from '../../data/excelExport'
 
 function ini(n=''){return n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
+
+// Avatar component — shows photo if available
+function Avatar({ user, size=32, fontSize=11 }) {
+  if (user?.profilePhoto) {
+    return <img src={user.profilePhoto} alt={user.name} style={{width:size,height:size,borderRadius:'50%',objectFit:'cover',flexShrink:0}}/>
+  }
+  return (
+    <div className={`av ${user?.highlight==='orange'?'av-orange':user?.role==='admin'?'av-blue':'av-gray'}`}
+      style={{width:size,height:size,fontSize,flexShrink:0}}>
+      {ini(user?.name||'')}
+    </div>
+  )
+}
 
 // ─── Employees ───────────────────────────────────────────────
 export function Employees({ toast, storeData }) {
@@ -17,7 +27,7 @@ export function Employees({ toast, storeData }) {
   const [saving,  setSaving]  = useState(false)
 
   const agents = users.filter(u =>
-    u.role==='agent' &&
+    u.role === 'agent' &&
     (!search || u.name.toLowerCase().includes(search.toLowerCase()) ||
      (u.employeeId||'').includes(search) || u.email.toLowerCase().includes(search.toLowerCase()))
   )
@@ -27,29 +37,30 @@ export function Employees({ toast, storeData }) {
   const upd = (k,v) => setForm(p=>({...p,[k]:v}))
 
   const save = async () => {
-    if (!form.name.trim()||!form.email.trim()||!form.password) { toast('Fill all required fields','warning'); return }
+    if (!form.name?.trim() || !form.email?.trim()) { toast('Fill all required fields','warning'); return }
+    if (modal === 'add' && !form.password) { toast('Password required','warning'); return }
     setSaving(true)
     try {
-      if (modal==='add') {
+      if (modal === 'add') {
         await addUser(form)
-        toast(form.name+' added successfully','success')
+        toast(form.name + ' added successfully', 'success')
       } else {
-        await updateUser(form._id||form.id, form)
-        toast('Employee updated','success')
+        // Admin can change defaultShift without password — only sends password if explicitly changed
+        const payload = { ...form }
+        if (!payload.password || payload.password === '••••••') delete payload.password
+        await updateUser(form._id || form.id, payload)
+        toast('Employee updated', 'success')
       }
       await refreshUsers()
       setModal(null)
-    } catch(e) { toast(e.message,'danger') }
+    } catch(e) { toast(e.message, 'danger') }
     setSaving(false)
   }
 
   const del = async (u) => {
     if (!window.confirm(`Remove ${u.name}?`)) return
-    try {
-      await deleteUser(u._id||u.id)
-      toast(u.name+' removed','danger')
-      await refreshUsers()
-    } catch(e) { toast(e.message,'danger') }
+    try { await deleteUser(u._id||u.id); toast(u.name+' removed','danger'); await refreshUsers() }
+    catch(e) { toast(e.message,'danger') }
   }
 
   return (
@@ -59,7 +70,7 @@ export function Employees({ toast, storeData }) {
           <h1>Employees</h1><span className="badge badge-gray">{agents.length}</span>
         </div>
         <div style={{display:'flex',gap:8}}>
-          <input placeholder="🔍 Search name / email / ID…" value={search} onChange={e=>setSearch(e.target.value)} style={{width:200}}/>
+          <input placeholder="🔍 Search name / email / ID…" value={search} onChange={e=>setSearch(e.target.value)} style={{width:220}}/>
           <button className="btn btn-primary" onClick={openAdd}>+ Add Employee</button>
         </div>
       </div>
@@ -67,23 +78,19 @@ export function Employees({ toast, storeData }) {
       <div className="card card-np">
         <div className="tbl-wrap">
           <table>
-            <thead><tr><th>Emp ID</th><th>Name</th><th>Email</th><th>Dept</th><th>Default Shift</th><th>Highlight</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Emp ID</th><th>Photo</th><th>Name</th><th>Email</th><th>Dept</th><th>Default Shift</th><th>Highlight</th><th>Actions</th></tr></thead>
             <tbody>
-              {agents.length===0&&<tr><td colSpan="7" style={{textAlign:'center',padding:32,color:'var(--t3)'}}>No employees found</td></tr>}
+              {agents.length===0&&<tr><td colSpan="8" style={{textAlign:'center',padding:32,color:'var(--t3)'}}>No employees found</td></tr>}
               {agents.map(u=>(
                 <tr key={u._id||u.id} className={u.highlight==='orange'?'row-orange':''}>
                   <td><span className="empid">{u.employeeId||'—'}</span></td>
-                  <td>
-                    <div style={{display:'flex',alignItems:'center',gap:8}}>
-                      <div className={`av ${u.highlight==='orange'?'av-orange':'av-gray'}`} style={{width:28,height:28,fontSize:10}}>{ini(u.name)}</div>
-                      <span style={{fontWeight:500}}>{u.name}</span>
-                    </div>
-                  </td>
+                  <td><Avatar user={u} size={32} fontSize={10}/></td>
+                  <td><span style={{fontWeight:500}}>{u.name}</span></td>
                   <td style={{fontSize:12,color:'var(--t2)'}}>{u.email}</td>
                   <td style={{fontSize:12}}>{u.dept}</td>
                   <td>
                     <span style={{background:SHIFT_TYPES[u.defaultShift]?.color||'#888',color:'#fff',padding:'3px 8px',borderRadius:6,fontSize:11,fontWeight:600}}>
-                      {SHIFT_TYPES[u.defaultShift]?.label||u.defaultShift}
+                      {u.defaultShift} — {SHIFT_TYPES[u.defaultShift]?.label||u.defaultShift}
                     </span>
                   </td>
                   <td>{u.highlight?<span style={{background:'orange',color:'#fff',padding:'2px 8px',borderRadius:10,fontSize:11}}>{u.highlight}</span>:'—'}</td>
@@ -98,7 +105,7 @@ export function Employees({ toast, storeData }) {
         </div>
       </div>
 
-      {modal&&(
+      {modal && (
         <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setModal(null)}>
           <div className="modal">
             <div className="modal-hd"><h3>{modal==='add'?'Add Employee':'Edit Employee'}</h3><button className="close-btn" onClick={()=>setModal(null)}>×</button></div>
@@ -112,12 +119,14 @@ export function Employees({ toast, storeData }) {
                 <div className="form-group"><label>Department</label><input value={form.dept||''} onChange={e=>upd('dept',e.target.value)}/></div>
               </div>
               <div className="form-row">
-                <div className="form-group"><label>Password *</label>
+                <div className="form-group">
+                  <label>{modal==='edit'?'New Password (leave blank to keep)':'Password *'}</label>
                   <div className="input-icon-wrap">
-                    <input type={showPwd?'text':'password'} value={form.password||''} onChange={e=>upd('password',e.target.value)}/>
+                    <input type={showPwd?'text':'password'} value={form.password||''} onChange={e=>upd('password',e.target.value)} placeholder={modal==='edit'?'Leave blank to keep current':''}/>
                     <button type="button" className="eye-btn" onClick={()=>setShowPwd(s=>!s)}>{showPwd?'🙈':'👁'}</button>
                   </div>
                 </div>
+                {/* Default Shift — admin can change without password */}
                 <div className="form-group"><label>Default Shift</label>
                   <select value={form.defaultShift||'MC'} onChange={e=>upd('defaultShift',e.target.value)}>
                     {Object.entries(SHIFT_TYPES).filter(([,d])=>d.minAgents>0).map(([k,d])=>(
@@ -145,35 +154,79 @@ export function Employees({ toast, storeData }) {
 
 // ─── Admin Leaves ─────────────────────────────────────────────
 export function Leaves({ toast, storeData }) {
-  const { leaves, refreshLeaves } = storeData
-  const [tab,    setTab]    = useState('pending')
-  const [saving, setSaving] = useState(false)
+  const { leaves, agents, refreshLeaves } = storeData
+  const [tab,     setTab]     = useState('pending')
+  const [saving,  setSaving]  = useState(false)
+  const [filterName,  setFilterName]  = useState('')
+  const [filterMonth, setFilterMonth] = useState('')
+  const [filterType,  setFilterType]  = useState('')
+  const [lastRefresh, setLastRefresh] = useState(new Date())
 
-  const shown = leaves.filter(l=>tab==='all'||l.status===tab)
+  const TABS = ['pending','approved','rejected','cancelled','all']
+
+  const shown = leaves.filter(l => {
+    if (tab !== 'all' && l.status !== tab) return false
+    if (filterName  && !l.userName?.toLowerCase().includes(filterName.toLowerCase()) && !l.userEmpId?.includes(filterName)) return false
+    if (filterType  && l.leaveType !== filterType) return false
+    if (filterMonth && !l.from?.startsWith(filterMonth) && !l.to?.startsWith(filterMonth)) return false
+    return true
+  })
 
   const act = async (id, status) => {
     setSaving(true)
     try {
       await updateLeaveStatus(id, status)
-      toast(`Leave ${status}`, status==='approved'?'success':'warning')
+      toast(`Leave ${status}`, status === 'approved' ? 'success' : 'warning')
       await refreshLeaves()
-    } catch(e) { toast(e.message,'danger') }
+    } catch(e) { toast(e.message, 'danger') }
     setSaving(false)
   }
+
+  const handleRefresh = async () => {
+    await refreshLeaves()
+    setLastRefresh(new Date())
+    toast('Refreshed', 'info')
+  }
+
+  const clearFilters = () => { setFilterName(''); setFilterMonth(''); setFilterType('') }
 
   return (
     <div className="page">
       <div className="page-hd">
-        <div><h1>Leave Requests</h1><p className="sub">Review and action agent leave applications</p></div>
-        <button className="btn btn-sm btn-outline" onClick={()=>exportLeavesExcel(leaves)}>⬇ Export Excel</button>
+        <div>
+          <h1>Leave Requests</h1>
+          <p className="sub">Review and action agent leave applications &nbsp;·&nbsp;
+            <span style={{fontSize:11,color:'var(--t3)'}}>Auto-refreshes every 30s · Last: {lastRefresh.toLocaleTimeString()}</span>
+          </p>
+        </div>
+        <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+          <button className="btn btn-sm btn-outline" onClick={handleRefresh}>🔄 Refresh Now</button>
+          <button className="btn btn-sm btn-outline" onClick={()=>exportLeavesExcel(shown, filterMonth||new Date().toISOString().slice(0,10))}>⬇ Export Filtered</button>
+        </div>
       </div>
+
+      {/* ── Filters ── */}
+      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:12,padding:'12px',background:'var(--s2)',borderRadius:8,border:'1px solid var(--border)'}}>
+        <input placeholder="🔍 Search agent name / emp ID…" value={filterName} onChange={e=>setFilterName(e.target.value)} style={{flex:1,minWidth:180}}/>
+        <input type="month" value={filterMonth} onChange={e=>setFilterMonth(e.target.value)} style={{width:160}} title="Filter by month"/>
+        <select value={filterType} onChange={e=>setFilterType(e.target.value)} style={{width:160}}>
+          <option value="">All Leave Types</option>
+          {['Casual','Sick','Annual','Emergency','Comp Off','Maternity/Paternity'].map(t=><option key={t}>{t}</option>)}
+        </select>
+        {(filterName||filterMonth||filterType) && (
+          <button className="btn btn-sm btn-outline" onClick={clearFilters}>✕ Clear</button>
+        )}
+        <span style={{fontSize:12,color:'var(--t2)',alignSelf:'center'}}>{shown.length} record{shown.length!==1?'s':''}</span>
+      </div>
+
       <div className="tabs">
-        {['pending','approved','rejected','all'].map(t=>(
+        {TABS.map(t=>(
           <div key={t} className={`tab${tab===t?' active':''}`} onClick={()=>setTab(t)} style={{textTransform:'capitalize'}}>
             {t}{t!=='all'&&` (${leaves.filter(l=>l.status===t).length})`}
           </div>
         ))}
       </div>
+
       <div className="card card-np">
         <div className="tbl-wrap">
           <table>
@@ -192,12 +245,13 @@ export function Leaves({ toast, storeData }) {
                     <td style={{fontWeight:700}}>{days}</td>
                     <td style={{maxWidth:140,fontSize:12}}>{l.reason}</td>
                     <td style={{fontSize:11,color:'var(--t2)'}}>{l.appliedAt?.slice(0,10)}</td>
-                    <td><span className={`badge badge-${l.status==='approved'?'green':l.status==='rejected'?'red':'amber'}`}>{l.status}</span></td>
+                    <td><span className={`badge badge-${l.status==='approved'?'green':l.status==='rejected'?'red':l.status==='cancelled'?'gray':'amber'}`}>{l.status}</span></td>
                     <td style={{whiteSpace:'nowrap'}}>
                       {l.status==='pending'&&<>
-                        <button className="btn btn-xs btn-success" onClick={()=>act(l.id,'approved')} disabled={saving}>✓ Approve</button>{' '}
-                        <button className="btn btn-xs btn-danger"  onClick={()=>act(l.id,'rejected')} disabled={saving}>✕ Reject</button>
+                        <button className="btn btn-xs btn-success" onClick={()=>act(l.id,'approved')} disabled={saving}>✓</button>{' '}
+                        <button className="btn btn-xs btn-danger"  onClick={()=>act(l.id,'rejected')} disabled={saving}>✕</button>
                       </>}
+                      {l.remark&&<div style={{fontSize:10,color:'var(--t3)',marginTop:2}}>{l.remark}</div>}
                     </td>
                   </tr>
                 )
@@ -210,103 +264,83 @@ export function Leaves({ toast, storeData }) {
   )
 }
 
-// ─── Settings ─────────────────────────────────────────────────
+// ─── Settings ────────────────────────────────────────────────
 export function Settings({ toast, storeData }) {
   const { users, refreshUsers } = storeData
+  const [oldPwd, setOldPwd] = useState('')
+  const [newPwd, setNewPwd] = useState('')
   const [saving, setSaving] = useState(false)
-  const [nf, setNf] = useState({ name:'', email:'', password:'' })
-  const admins = users.filter(u=>u.role==='admin')
 
-  const addAdmin = async () => {
-    if (!nf.name||!nf.email||!nf.password) { toast('Fill all fields','warning'); return }
+  const handlePwdChange = async (e) => {
+    e.preventDefault()
+    if (newPwd.length < 6) { toast('Min 6 characters', 'warning'); return }
     setSaving(true)
     try {
-      await addUser({ ...nf, role:'admin', dept:'Management', defaultShift:'MC', highlight:'' })
-      toast('Admin created','success')
-      setNf({ name:'',email:'',password:'' })
-      await refreshUsers()
-    } catch(e) { toast(e.message,'danger') }
+      const res = await changePassword(null, oldPwd, newPwd)
+      if (res.ok) { toast('Password changed!', 'success'); setOldPwd(''); setNewPwd('') }
+      else toast(res.msg, 'danger')
+    } catch(e) { toast(e.message, 'danger') }
     setSaving(false)
-  }
-
-  const removeAdmin = async (u) => {
-    if (admins.length<=1) { toast('Must keep at least one admin','warning'); return }
-    if (!window.confirm(`Remove admin ${u.name}?`)) return
-    try {
-      await deleteUser(u._id||u.id)
-      toast('Removed','danger')
-      await refreshUsers()
-    } catch(e) { toast(e.message,'danger') }
   }
 
   return (
     <div className="page">
-      <div className="page-hd"><h1>System Settings</h1></div>
-      <div className="two-col">
-        <div className="card">
-          <div className="card-title">Shift Configuration</div>
-          {Object.entries(SHIFT_TYPES).map(([code,def])=>(
-            <div key={code} className="info-row">
-              <div style={{display:'flex',alignItems:'center',gap:6}}>
-                <div style={{width:10,height:10,background:def.color,borderRadius:2}}/>
-                <span style={{fontSize:12,fontWeight:600}}>{code}</span>
-                <span style={{fontSize:12,color:'var(--t2)'}}>{def.label}</span>
-              </div>
-              <span style={{fontSize:11,color:'var(--t3)'}}>{def.minAgents>0?`min ${def.minAgents} agents`:'—'}</span>
-            </div>
-          ))}
-        </div>
-        <div className="card">
-          <div className="card-title">Admin Accounts</div>
-          {admins.map(u=>(
-            <div key={u._id||u.id} className="info-row">
-              <span style={{fontWeight:500,fontSize:12}}>{u.name}</span>
-              <div style={{display:'flex',alignItems:'center',gap:8}}>
-                <span style={{fontSize:11,color:'var(--t3)'}}>{u.email}</span>
-                <button className="btn btn-xs btn-danger" onClick={()=>removeAdmin(u)}>Remove</button>
-              </div>
-            </div>
-          ))}
-          <div style={{marginTop:16,borderTop:'1px solid var(--border)',paddingTop:14}}>
-            <div style={{fontWeight:700,fontSize:13,marginBottom:10}}>Create Admin Account</div>
-            <div className="form-group"><label>Name</label><input value={nf.name} onChange={e=>setNf(p=>({...p,name:e.target.value}))}/></div>
-            <div className="form-group"><label>Email</label><input type="email" value={nf.email} onChange={e=>setNf(p=>({...p,email:e.target.value}))}/></div>
-            <div className="form-group"><label>Password</label><input type="password" value={nf.password} onChange={e=>setNf(p=>({...p,password:e.target.value}))}/></div>
-            <button className="btn btn-primary btn-sm" onClick={addAdmin} disabled={saving}>{saving?'Creating…':'Create Admin'}</button>
-          </div>
-        </div>
+      <div className="page-hd"><h1>Settings</h1></div>
+      <div className="card" style={{maxWidth:440}}>
+        <div className="card-title">Change Password</div>
+        <form onSubmit={handlePwdChange}>
+          <div className="form-group"><label>Current Password</label><input type="password" value={oldPwd} onChange={e=>setOldPwd(e.target.value)} required/></div>
+          <div className="form-group"><label>New Password</label><input type="password" value={newPwd} onChange={e=>setNewPwd(e.target.value)} required/></div>
+          <button type="submit" className="btn btn-primary" disabled={saving}>{saving?'Saving…':'Change Password'}</button>
+        </form>
       </div>
     </div>
   )
 }
 
-// ─── Profile ──────────────────────────────────────────────────
-export function Profile({ user, toast, onUserUpdate, storeData }) {
-  const { refreshUsers } = storeData
-  const [pf,   setPf]  = useState({ name:user.name, email:user.email })
-  const [cpf,  setCpf] = useState({ old:'', new1:'', new2:'' })
-  const [err,  setErr] = useState('')
-  const [saving, setSaving] = useState(false)
+// ─── Profile (with photo upload) ─────────────────────────────
+export function Profile({ user, toast, onRefresh, onUserUpdate, storeData }) {
+  const { agents } = storeData
+  const [name,    setName]    = useState(user.name || '')
+  const [saving,  setSaving]  = useState(false)
+  const [oldPwd,  setOldPwd]  = useState('')
+  const [newPwd,  setNewPwd]  = useState('')
+  const [photo,   setPhoto]   = useState(user.profilePhoto || '')
+  const fileRef = useRef()
 
-  function ini2(n=''){return n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
+  // Show all agents' photos for admin
+  const agentsWithPhotos = agents.filter(a => a.profilePhoto)
 
-  const saveProfile = async () => {
+  const handlePhotoChange = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    if (file.size > 2 * 1024 * 1024) { toast('Photo must be under 2MB', 'warning'); return }
+    const reader = new FileReader()
+    reader.onload = (ev) => setPhoto(ev.target.result)
+    reader.readAsDataURL(file)
+  }
+
+  const saveProfile = async (e) => {
+    e.preventDefault()
     setSaving(true)
     try {
-      await updateUser(user._id||user.id, { name:pf.name, email:pf.email })
-      toast('Profile updated','success')
-      onUserUpdate()
-    } catch(e) { toast(e.message,'danger') }
+      const res = await updateProfile({ name: name.trim(), profilePhoto: photo })
+      if (res.ok) { toast('Profile updated!', 'success'); onUserUpdate() }
+      else toast(res.msg, 'danger')
+    } catch(e) { toast(e.message, 'danger') }
     setSaving(false)
   }
 
   const changePwd = async (e) => {
-    e.preventDefault(); setErr('')
-    if (cpf.new1.length<6) { setErr('Min 6 characters'); return }
-    if (cpf.new1!==cpf.new2) { setErr('Passwords do not match'); return }
-    const res = await changePassword(user._id||user.id, cpf.old, cpf.new1)
-    if (res.ok) { toast('Password changed!','success'); setCpf({old:'',new1:'',new2:''}) }
-    else setErr(res.msg)
+    e.preventDefault()
+    if (newPwd.length < 6) { toast('Min 6 characters', 'warning'); return }
+    setSaving(true)
+    try {
+      const res = await changePassword(null, oldPwd, newPwd)
+      if (res.ok) { toast('Password changed!', 'success'); setOldPwd(''); setNewPwd('') }
+      else toast(res.msg, 'danger')
+    } catch(e) { toast(e.message, 'danger') }
+    setSaving(false)
   }
 
   return (
@@ -315,30 +349,117 @@ export function Profile({ user, toast, onUserUpdate, storeData }) {
       <div className="two-col">
         <div className="card">
           <div className="card-title">Profile Information</div>
-          <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:20}}>
-            <div className={`av ${user.role==='admin'?'av-blue':'av-gray'}`} style={{width:52,height:52,fontSize:18}}>{ini2(user.name)}</div>
-            <div>
-              <div style={{fontWeight:700,fontSize:15}}>{user.name}</div>
-              <div style={{fontSize:12,color:'var(--t2)'}}>{user.email}</div>
-              <div style={{marginTop:4}}>
-                <span className={`badge ${user.role==='admin'?'badge-blue':'badge-green'}`}>{user.role}</span>
-                {user.employeeId&&<span className="empid" style={{marginLeft:8}}>{user.employeeId}</span>}
+          <form onSubmit={saveProfile}>
+            {/* Photo */}
+            <div style={{display:'flex',flexDirection:'column',alignItems:'center',marginBottom:20}}>
+              <div style={{position:'relative',marginBottom:10}}>
+                {photo
+                  ? <img src={photo} alt="Profile" style={{width:80,height:80,borderRadius:'50%',objectFit:'cover',border:'3px solid var(--accent)'}}/>
+                  : <div className="av av-blue" style={{width:80,height:80,fontSize:24}}>{ini(name)}</div>
+                }
+                <button type="button"
+                  style={{position:'absolute',bottom:0,right:0,background:'var(--accent)',border:'none',borderRadius:'50%',width:26,height:26,cursor:'pointer',fontSize:14,color:'#fff',display:'flex',alignItems:'center',justifyContent:'center'}}
+                  onClick={()=>fileRef.current.click()}>📷</button>
               </div>
+              <input ref={fileRef} type="file" accept="image/*" style={{display:'none'}} onChange={handlePhotoChange}/>
+              {photo && <button type="button" className="btn btn-sm btn-outline" onClick={()=>setPhoto('')}>Remove Photo</button>}
             </div>
-          </div>
-          <div className="form-group"><label>Full Name</label><input value={pf.name} onChange={e=>setPf(p=>({...p,name:e.target.value}))}/></div>
-          <div className="form-group"><label>Email</label><input type="email" value={pf.email} onChange={e=>setPf(p=>({...p,email:e.target.value}))}/></div>
-          <button className="btn btn-primary" onClick={saveProfile} disabled={saving}>{saving?'Saving…':'Save Profile'}</button>
-        </div>
-        <div className="card">
-          <div className="card-title">Change Password</div>
-          {err&&<div className="auth-error" style={{marginBottom:12}}>{err}</div>}
-          <form onSubmit={changePwd}>
-            <div className="form-group"><label>Current Password</label><input type="password" value={cpf.old} onChange={e=>setCpf(p=>({...p,old:e.target.value}))} required/></div>
-            <div className="form-group"><label>New Password</label><input type="password" value={cpf.new1} onChange={e=>setCpf(p=>({...p,new1:e.target.value}))} required/></div>
-            <div className="form-group"><label>Confirm New Password</label><input type="password" value={cpf.new2} onChange={e=>setCpf(p=>({...p,new2:e.target.value}))} required/></div>
-            <button type="submit" className="btn btn-primary">Change Password</button>
+            <div className="form-group"><label>Full Name</label><input value={name} onChange={e=>setName(e.target.value)} required/></div>
+            <div className="form-group"><label>Email</label><input value={user.email} disabled style={{opacity:.6}}/></div>
+            <div className="form-group"><label>Employee ID</label><input value={user.employeeId||'—'} disabled style={{opacity:.6}}/></div>
+            <div className="form-group"><label>Role</label><input value={user.role} disabled style={{opacity:.6}}/></div>
+            <button type="submit" className="btn btn-primary btn-full" disabled={saving}>{saving?'Saving…':'Save Profile'}</button>
           </form>
+        </div>
+
+        <div style={{display:'flex',flexDirection:'column',gap:16}}>
+          <div className="card">
+            <div className="card-title">Change Password</div>
+            <form onSubmit={changePwd}>
+              <div className="form-group"><label>Current Password</label><input type="password" value={oldPwd} onChange={e=>setOldPwd(e.target.value)} required/></div>
+              <div className="form-group"><label>New Password (min 6)</label><input type="password" value={newPwd} onChange={e=>setNewPwd(e.target.value)} required/></div>
+              <button type="submit" className="btn btn-primary btn-full" disabled={saving}>{saving?'Saving…':'Change Password'}</button>
+            </form>
+          </div>
+
+          {/* Admin sees all agent photos */}
+          {user.role === 'admin' && (
+            <div className="card">
+              <div className="card-title">Agent Profile Photos ({agentsWithPhotos.length})</div>
+              {agentsWithPhotos.length === 0
+                ? <div style={{color:'var(--t3)',fontSize:13,textAlign:'center',padding:16}}>No agents have set a profile photo yet</div>
+                : <div style={{display:'flex',flexWrap:'wrap',gap:12,marginTop:8}}>
+                  {agentsWithPhotos.map(a=>(
+                    <div key={a._id||a.id} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
+                      <img src={a.profilePhoto} alt={a.name} style={{width:48,height:48,borderRadius:'50%',objectFit:'cover',border:'2px solid var(--border)'}}/>
+                      <span style={{fontSize:10,color:'var(--t2)',textAlign:'center',maxWidth:56,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{a.name}</span>
+                    </div>
+                  ))}
+                </div>
+              }
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Monthly Report ───────────────────────────────────────────
+export function MonthlyReport({ toast, storeData }) {
+  const { agents, leaves, scheduleCache, loadSchedule } = storeData
+  const now = new Date()
+  const [month, setMonth] = useState(`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`)
+  const [loading, setLoading] = useState(false)
+
+  const handleDownload = async () => {
+    setLoading(true)
+    try {
+      // Get all weeks in the month
+      const [y, m] = month.split('-')
+      const daysInMonth = new Date(parseInt(y), parseInt(m), 0).getDate()
+      const weekKeys = new Set()
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`
+        const wk = getWeekKeyFromDate(dateStr)
+        weekKeys.add(wk)
+      }
+      // Load all weeks
+      const schedulesByWeek = { ...scheduleCache }
+      for (const wk of weekKeys) {
+        if (!schedulesByWeek[wk]) {
+          const data = await loadSchedule(wk)
+          schedulesByWeek[wk] = data?.shifts || {}
+        } else {
+          schedulesByWeek[wk] = schedulesByWeek[wk]?.shifts || schedulesByWeek[wk] || {}
+        }
+      }
+      exportMonthlyReportExcel(month, agents, schedulesByWeek, leaves)
+      toast('Monthly report downloaded!', 'success')
+    } catch(e) { toast(e.message, 'danger') }
+    setLoading(false)
+  }
+
+  function getWeekKeyFromDate(dateStr) {
+    const d = new Date(dateStr), day = d.getDay()
+    const mon = new Date(d); mon.setDate(d.getDate() - (day===0?6:day-1))
+    return mon.toISOString().slice(0,10)
+  }
+
+  return (
+    <div className="page">
+      <div className="page-hd"><h1>Monthly Report</h1></div>
+      <div className="card" style={{maxWidth:400}}>
+        <div className="card-title">Download Monthly Schedule Report</div>
+        <div className="form-group">
+          <label>Select Month</label>
+          <input type="month" value={month} onChange={e=>setMonth(e.target.value)}/>
+        </div>
+        <button className="btn btn-primary btn-full" onClick={handleDownload} disabled={loading}>
+          {loading ? 'Generating…' : `⬇ Download ${month} Report (Excel)`}
+        </button>
+        <div style={{marginTop:12,fontSize:12,color:'var(--t2)'}}>
+          Downloads full schedule for all agents for every day of the selected month including work days, off days, and leave days summary.
         </div>
       </div>
     </div>
