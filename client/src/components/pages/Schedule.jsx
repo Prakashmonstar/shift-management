@@ -1,4 +1,3 @@
-// client/src/components/pages/Schedule.jsx
 import React, { useState, useEffect } from 'react'
 import {
   SHIFT_TYPES, getWeekDates, formatDate, getDayName,
@@ -11,23 +10,23 @@ import { exportScheduleExcel } from '../../data/excelExport'
 function ShiftPicker({ agent, dateStr, current, onPick, onClose }) {
   return (
     <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div className="modal" style={{maxWidth:340}}>
+      <div className="modal" style={{maxWidth:360}}>
         <div className="modal-hd">
           <h3>Set Shift — {agent.name}</h3>
           <button className="close-btn" onClick={onClose}>×</button>
         </div>
         <div className="modal-bd">
           <div style={{fontSize:12,color:'var(--t2)',marginBottom:12}}>{getDayName(dateStr)}, {formatDate(dateStr)}</div>
-          <div style={{display:'flex',flexDirection:'column',gap:6}}>
+          <div style={{display:'flex',flexDirection:'column',gap:6,maxHeight:'65vh',overflowY:'auto'}}>
             {Object.entries(SHIFT_TYPES).map(([code,def])=>(
               <button key={code} onClick={()=>{ onPick(code); onClose() }}
                 style={{
                   padding:'10px 14px',borderRadius:8,cursor:'pointer',textAlign:'left',
                   display:'flex',justifyContent:'space-between',alignItems:'center',
-                  border:current===code?'2px solid #1e293b':'1px solid transparent',
+                  border:current===code?'2px solid #fff':'1px solid transparent',
                   background:def.color,color:def.textColor,fontWeight:600,fontSize:12
                 }}>
-                <span>{def.label}</span>
+                <span>{code}: {def.label}</span>
                 <span style={{fontSize:10}}>{def.start&&`${def.start}–${def.end}`}</span>
                 {current===code&&<span>✓</span>}
               </button>
@@ -43,13 +42,14 @@ export function Schedule({ user, toast, onRefresh, storeData }) {
   const isAdmin = user.role === 'admin'
   const { agents, leaves, scheduleCache, loadSchedule, setScheduleCache } = storeData
 
-  const [weekKey,     setWeekKey]     = useState(()=>isAdmin?getNextWeekKey(getCurrentWeekKey()):getCurrentWeekKey())
-  const [picker,      setPicker]      = useState(null)
-  const [rejectModal, setRejectModal] = useState(false)
-  const [rejectNote,  setRejectNote]  = useState('')
-  const [saving,      setSaving]      = useState(false)
+  const [weekKey,      setWeekKey]      = useState(()=>isAdmin?getNextWeekKey(getCurrentWeekKey()):getCurrentWeekKey())
+  const [picker,       setPicker]       = useState(null)
+  const [rejectModal,  setRejectModal]  = useState(false)
+  const [rejectNote,   setRejectNote]   = useState('')
+  const [saving,       setSaving]       = useState(false)
+  const [changeLog,    setChangeLog]    = useState([]) // track what changed
 
-  useEffect(() => { loadSchedule(weekKey) }, [weekKey])
+  useEffect(() => { loadSchedule(weekKey); setChangeLog([]) }, [weekKey])
 
   const cached   = scheduleCache[weekKey] || { status:'draft', shifts:{} }
   const schedule = cached.shifts || {}
@@ -77,9 +77,10 @@ export function Schedule({ user, toast, onRefresh, storeData }) {
 
   const handlePick = async (agent, dateStr, code) => {
     const agentId = agent._id || agent.id
+    const prevCode = getCell(agentId, dateStr)
     setSaving(true)
     try {
-      await setAgentShift(weekKey, agentId, dateStr, code)
+      const result = await setAgentShift(weekKey, agentId, dateStr, code, prevCode)
       // Optimistic update
       setScheduleCache(prev => ({
         ...prev,
@@ -91,6 +92,18 @@ export function Schedule({ user, toast, onRefresh, storeData }) {
           }
         }
       }))
+      // Log the change
+      if (prevCode !== code) {
+        setChangeLog(prev => [{
+          agent: agent.name,
+          agentId,
+          dateStr,
+          dayName: getDayName(dateStr),
+          from: prevCode,
+          to: code,
+          time: new Date().toLocaleTimeString()
+        }, ...prev.slice(0, 19)])
+      }
     } catch(e) { toast(e.message,'danger') }
     setSaving(false)
   }
@@ -107,12 +120,12 @@ export function Schedule({ user, toast, onRefresh, storeData }) {
   }
 
   const handleAutoGen = async () => {
-    if (!window.confirm('Auto-generate from default shifts? This overwrites the current draft.')) return
+    if (!window.confirm('Auto-generate from default shifts? This always uses each agent\'s default shift (never copies previous week).')) return
     setSaving(true)
     try {
       await autoGenerateWeek(weekKey)
       await loadSchedule(weekKey)
-      toast('Schedule auto-generated!','success')
+      toast('Schedule auto-generated from default shifts!','success')
     } catch(e) { toast(e.message,'danger') }
     setSaving(false)
   }
@@ -141,9 +154,7 @@ export function Schedule({ user, toast, onRefresh, storeData }) {
             <button className="btn btn-sm btn-danger"  onClick={()=>setRejectModal(true)} disabled={saving}>✕ Reject</button>
           </>}
           {!isAdmin&&status==='draft'&&(
-            <button className="btn btn-sm btn-primary" onClick={()=>handleStatusChange('pending')} disabled={saving}>
-              📤 Submit for Approval
-            </button>
+            <button className="btn btn-sm btn-primary" onClick={()=>handleStatusChange('pending')} disabled={saving}>📤 Submit for Approval</button>
           )}
         </div>
       </div>
@@ -163,6 +174,25 @@ export function Schedule({ user, toast, onRefresh, storeData }) {
         </div>
       )}
       {!isAdmin&&<div className="info-banner">👁 View only. Use "Request Shift" to request changes.</div>}
+
+      {/* ── Change Log ── */}
+      {isAdmin && changeLog.length > 0 && (
+        <div style={{marginBottom:12,padding:'10px 14px',background:'rgba(37,99,235,.07)',borderRadius:8,border:'1px solid var(--border)'}}>
+          <div style={{fontWeight:700,fontSize:12,marginBottom:6,color:'var(--blue)'}}>📋 Recent Changes This Session ({changeLog.length})</div>
+          <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+            {changeLog.slice(0,6).map((c,i)=>(
+              <div key={i} style={{fontSize:11,background:'var(--s2)',borderRadius:6,padding:'3px 8px',border:'1px solid var(--border)'}}>
+                <strong>{c.agent}</strong> · {c.dayName} {formatDate(c.dateStr)} ·{' '}
+                <span style={{background:SHIFT_TYPES[c.from]?.color,color:SHIFT_TYPES[c.from]?.textColor,padding:'1px 5px',borderRadius:3}}>{c.from}</span>
+                &nbsp;→&nbsp;
+                <span style={{background:SHIFT_TYPES[c.to]?.color,color:SHIFT_TYPES[c.to]?.textColor,padding:'1px 5px',borderRadius:3}}>{c.to}</span>
+                &nbsp;<span style={{color:'var(--t3)'}}>{c.time}</span>
+              </div>
+            ))}
+          </div>
+          {changeLog.length>6&&<div style={{fontSize:10,color:'var(--t3)',marginTop:4}}>+{changeLog.length-6} more changes</div>}
+        </div>
+      )}
 
       <div className="card card-np">
         <div className="tbl-wrap" style={{maxHeight:'65vh'}}>
@@ -188,7 +218,10 @@ export function Schedule({ user, toast, onRefresh, storeData }) {
                     <td className="sticky-col"><span className="empid">{agent.employeeId}</span></td>
                     <td className="sticky-col2">
                       <div style={{display:'flex',alignItems:'center',gap:7}}>
-                        <div className={`av ${agent.highlight==='orange'?'av-orange':'av-gray'}`} style={{width:24,height:24,fontSize:9}}>{agent.name.slice(0,1)}</div>
+                        {agent.profilePhoto
+                          ? <img src={agent.profilePhoto} alt={agent.name} style={{width:24,height:24,borderRadius:'50%',objectFit:'cover',flexShrink:0}}/>
+                          : <div className={`av ${agent.highlight==='orange'?'av-orange':'av-gray'}`} style={{width:24,height:24,fontSize:9}}>{agent.name.slice(0,1)}</div>
+                        }
                         <span style={{fontWeight:500,fontSize:12}}>{agent.name}</span>
                       </div>
                     </td>

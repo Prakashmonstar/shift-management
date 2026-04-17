@@ -1,4 +1,3 @@
-// server/routes/schedules.js
 const router   = require('express').Router()
 const Schedule = require('../models/Schedule')
 const Leave    = require('../models/Leave')
@@ -7,16 +6,19 @@ const { protect, adminOnly } = require('../middleware/auth')
 
 router.use(protect)
 
-// ── GET /api/schedules/:weekKey ───────────────────────────────
+function getWeekDates(weekKey) {
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(weekKey)
+    d.setDate(d.getDate() + i)
+    return d.toISOString().slice(0, 10)
+  })
+}
+
 router.get('/:weekKey', async (req, res) => {
   try {
     const { weekKey } = req.params
     let doc = await Schedule.findOne({ weekKey })
-    if (!doc) {
-      // Return empty schedule with draft status
-      return res.json({ ok: true, weekKey, status: 'draft', shifts: {} })
-    }
-    // Convert Map to plain object for JSON
+    if (!doc) return res.json({ ok: true, weekKey, status: 'draft', shifts: {} })
     const shifts = {}
     if (doc.shifts) {
       for (const [uid, dayMap] of doc.shifts) {
@@ -29,79 +31,54 @@ router.get('/:weekKey', async (req, res) => {
       }
     }
     res.json({ ok: true, weekKey, status: doc.status, shifts })
-  } catch (err) {
-    res.status(500).json({ ok: false, msg: err.message })
-  }
+  } catch (err) { res.status(500).json({ ok: false, msg: err.message }) }
 })
 
-// ── PUT /api/schedules/:weekKey/shift  (admin only) ──────────
-// Body: { userId, dateStr, shiftCode }
+// Single cell update — records the change
 router.put('/:weekKey/shift', adminOnly, async (req, res) => {
   try {
     const { weekKey } = req.params
-    const { userId, dateStr, shiftCode } = req.body
+    const { userId, dateStr, shiftCode, prevCode } = req.body
 
     let doc = await Schedule.findOne({ weekKey })
     if (!doc) doc = new Schedule({ weekKey, shifts: new Map() })
-
     if (!doc.shifts) doc.shifts = new Map()
     if (!doc.shifts.get(userId)) doc.shifts.set(userId, new Map())
+
+    const oldCode = doc.shifts.get(userId).get(dateStr) || prevCode || ''
     doc.shifts.get(userId).set(dateStr, shiftCode)
     doc.markModified('shifts')
     await doc.save()
 
-    res.json({ ok: true })
-  } catch (err) {
-    res.status(500).json({ ok: false, msg: err.message })
-  }
+    res.json({ ok: true, changed: { userId, dateStr, from: oldCode, to: shiftCode } })
+  } catch (err) { res.status(500).json({ ok: false, msg: err.message }) }
 })
 
-// ── PUT /api/schedules/:weekKey/bulk  (admin only) ────────────
-// Body: { shifts: { userId: { dateStr: shiftCode } } }
 router.put('/:weekKey/bulk', adminOnly, async (req, res) => {
   try {
     const { weekKey } = req.params
-    const { shifts }  = req.body   // plain object
-
+    const { shifts }  = req.body
     const shiftMap = new Map()
     for (const [uid, days] of Object.entries(shifts || {})) {
       shiftMap.set(uid, new Map(Object.entries(days)))
     }
-
-    await Schedule.findOneAndUpdate(
-      { weekKey },
-      { weekKey, shifts: shiftMap },
-      { upsert: true, new: true }
-    )
+    await Schedule.findOneAndUpdate({ weekKey }, { weekKey, shifts: shiftMap }, { upsert: true, new: true })
     res.json({ ok: true })
-  } catch (err) {
-    res.status(500).json({ ok: false, msg: err.message })
-  }
+  } catch (err) { res.status(500).json({ ok: false, msg: err.message }) }
 })
 
-// ── PUT /api/schedules/:weekKey/status ────────────────────────
-// Body: { status }
 router.put('/:weekKey/status', protect, async (req, res) => {
   try {
     const { weekKey } = req.params
     const { status }  = req.body
-
-    // Agents can only set to 'pending', admins can set any
     if (req.user.role === 'agent' && status !== 'pending')
       return res.status(403).json({ ok: false, msg: 'Agents can only submit (pending)' })
-
-    await Schedule.findOneAndUpdate(
-      { weekKey },
-      { weekKey, status },
-      { upsert: true, new: true }
-    )
+    await Schedule.findOneAndUpdate({ weekKey }, { weekKey, status }, { upsert: true, new: true })
     res.json({ ok: true })
-  } catch (err) {
-    res.status(500).json({ ok: false, msg: err.message })
-  }
+  } catch (err) { res.status(500).json({ ok: false, msg: err.message }) }
 })
 
-// ── POST /api/schedules/:weekKey/auto-generate  (admin) ──────
+// Auto-generate: always uses defaultShift — NEVER copies prev week assignments
 router.post('/:weekKey/auto-generate', adminOnly, async (req, res) => {
   try {
     const { weekKey } = req.params
@@ -113,10 +90,13 @@ router.post('/:weekKey/auto-generate', adminOnly, async (req, res) => {
     agents.forEach(agent => {
       const dayMap = new Map()
       dates.forEach((dateStr, idx) => {
-        const onLeave = leaves.some(l => l.userId.toString() === agent._id.toString() && dateStr >= l.from && dateStr <= l.to)
-        if (onLeave)      dayMap.set(dateStr, 'LEAVE')
+        const onLeave = leaves.some(l =>
+          l.userId.toString() === agent._id.toString() &&
+          dateStr >= l.from && dateStr <= l.to
+        )
+        if (onLeave)       dayMap.set(dateStr, 'LEAVE')
         else if (idx === 6) dayMap.set(dateStr, 'OFF')
-        else                dayMap.set(dateStr, agent.defaultShift || 'MC')
+        else               dayMap.set(dateStr, agent.defaultShift || 'MC') // Always use defaultShift
       })
       shiftMap.set(agent._id.toString(), dayMap)
     })
@@ -127,18 +107,7 @@ router.post('/:weekKey/auto-generate', adminOnly, async (req, res) => {
       { upsert: true, new: true }
     )
     res.json({ ok: true })
-  } catch (err) {
-    res.status(500).json({ ok: false, msg: err.message })
-  }
+  } catch (err) { res.status(500).json({ ok: false, msg: err.message }) }
 })
-
-// helper
-function getWeekDates(weekKey) {
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(weekKey)
-    d.setDate(d.getDate() + i)
-    return d.toISOString().slice(0, 10)
-  })
-}
 
 module.exports = router

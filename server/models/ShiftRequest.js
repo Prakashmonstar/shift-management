@@ -1,4 +1,3 @@
-// server/models/ShiftRequest.js
 const mongoose = require('mongoose')
 
 const shiftRequestSchema = new mongoose.Schema({
@@ -8,7 +7,7 @@ const shiftRequestSchema = new mongoose.Schema({
   currentShift:   { type: String, required: true },
   requestedShift: { type: String, required: true },
   reason:         { type: String, required: true },
-  status:         { type: String, enum: ['pending','approved','rejected'], default: 'pending' },
+  status:         { type: String, enum: ['pending','approved','rejected','cancelled'], default: 'pending' },
   adminNote:      { type: String, default: '' },
   submittedAt:    { type: Date, default: Date.now },
   actionAt:       { type: Date },

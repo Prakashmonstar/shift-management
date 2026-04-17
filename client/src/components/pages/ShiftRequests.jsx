@@ -1,44 +1,104 @@
-// client/src/components/pages/ShiftRequests.jsx
 import React, { useState } from 'react'
-import { SHIFT_TYPES, getDayName, updateShiftRequestStatus } from '../../data/store'
+import { SHIFT_TYPES, getDayName, updateShiftRequestStatus, cancelShiftRequest } from '../../data/store'
 import { exportShiftRequestsExcel } from '../../data/excelExport'
 
 export function ShiftRequests({ toast, storeData }) {
   const { requests, refreshRequests } = storeData
-  const [tab,    setTab]    = useState('pending')
-  const [notes,  setNotes]  = useState({})
-  const [saving, setSaving] = useState(false)
+  const [tab,     setTab]     = useState('pending')
+  const [notes,   setNotes]   = useState({})
+  const [saving,  setSaving]  = useState(false)
+  // Filters
+  const [filterName,   setFilterName]   = useState('')
+  const [filterWeek,   setFilterWeek]   = useState('')
+  const [filterShift,  setFilterShift]  = useState('')
+  const [lastRefresh,  setLastRefresh]  = useState(new Date())
 
-  const shown = requests.filter(r=>tab==='all'||r.status===tab)
+  const TABS = ['all','pending','approved','rejected','cancelled']
+
+  const filtered = requests.filter(r => {
+    if (tab !== 'all' && r.status !== tab) return false
+    if (filterName  && !r.userName?.toLowerCase().includes(filterName.toLowerCase()) && !r.userEmpId?.includes(filterName)) return false
+    if (filterWeek  && r.weekKey !== filterWeek) return false
+    if (filterShift && r.currentShift !== filterShift && r.requestedShift !== filterShift) return false
+    return true
+  })
 
   const act = async (id, status) => {
     setSaving(true)
     try {
-      await updateShiftRequestStatus(id, status, notes[id]||'')
-      toast(`Request ${status}`, status==='approved'?'success':'warning')
+      await updateShiftRequestStatus(id, status, notes[id] || '')
+      toast(`Request ${status}`, status === 'approved' ? 'success' : 'warning')
       await refreshRequests()
-    } catch(e) { toast(e.message,'danger') }
+    } catch (e) { toast(e.message, 'danger') }
     setSaving(false)
   }
+
+  const handleCancel = async (id) => {
+    if (!window.confirm('Cancel this request?')) return
+    setSaving(true)
+    try {
+      await cancelShiftRequest(id)
+      toast('Request cancelled', 'warning')
+      await refreshRequests()
+    } catch (e) { toast(e.message, 'danger') }
+    setSaving(false)
+  }
+
+  const handleRefresh = async () => {
+    await refreshRequests()
+    setLastRefresh(new Date())
+    toast('Refreshed', 'info')
+  }
+
+  const clearFilters = () => { setFilterName(''); setFilterWeek(''); setFilterShift('') }
 
   return (
     <div className="page">
       <div className="page-hd">
-        <div><h1>Shift Change Requests</h1><p className="sub">Review and action agent shift change requests</p></div>
-        <button className="btn btn-sm btn-outline" onClick={()=>exportShiftRequestsExcel(requests)}>⬇ Export Excel</button>
+        <div>
+          <h1>Shift Change Requests</h1>
+          <p className="sub">Review and action agent shift change requests &nbsp;·&nbsp;
+            <span style={{fontSize:11,color:'var(--t3)'}}>Auto-refreshes every 30s · Last: {lastRefresh.toLocaleTimeString()}</span>
+          </p>
+        </div>
+        <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+          <button className="btn btn-sm btn-outline" onClick={handleRefresh}>🔄 Refresh Now</button>
+          <button className="btn btn-sm btn-outline" onClick={()=>exportShiftRequestsExcel(filtered, `filtered_${new Date().toISOString().slice(0,10)}`)}>⬇ Export Excel</button>
+        </div>
       </div>
+
+      {/* ── Filters ── */}
+      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:12,padding:'12px',background:'var(--s2)',borderRadius:8,border:'1px solid var(--border)'}}>
+        <input placeholder="🔍 Search agent name / emp ID…" value={filterName} onChange={e=>setFilterName(e.target.value)} style={{flex:1,minWidth:180}}/>
+        <input type="week" value={filterWeek ? filterWeek : ''} onChange={e=>setFilterWeek(e.target.value?.split('W')[0]?.trim()?.replace(/W/,'') || '')}
+          placeholder="Filter by week" style={{width:160}} title="Filter by week"/>
+        <input placeholder="Filter week (YYYY-MM-DD)" value={filterWeek} onChange={e=>setFilterWeek(e.target.value)} style={{width:160}}/>
+        <select value={filterShift} onChange={e=>setFilterShift(e.target.value)} style={{width:160}}>
+          <option value="">All Shifts</option>
+          {Object.entries(SHIFT_TYPES).filter(([,d])=>d.minAgents>0).map(([k,d])=>(
+            <option key={k} value={k}>{k} — {d.label}</option>
+          ))}
+        </select>
+        {(filterName||filterWeek||filterShift) && (
+          <button className="btn btn-sm btn-outline" onClick={clearFilters}>✕ Clear</button>
+        )}
+        <span style={{fontSize:12,color:'var(--t2)',alignSelf:'center'}}>{filtered.length} record{filtered.length!==1?'s':''}</span>
+      </div>
+
+      {/* ── Tabs ── */}
       <div className="tabs">
-        {['pending','approved','rejected','all'].map(t=>(
+        {TABS.map(t => (
           <div key={t} className={`tab${tab===t?' active':''}`} onClick={()=>setTab(t)} style={{textTransform:'capitalize'}}>
-            {t}{t!=='all'&&` (${requests.filter(r=>r.status===t).length})`}
+            {t}{t!=='all' && ` (${requests.filter(r=>r.status===t).length})`}
           </div>
         ))}
       </div>
-      {shown.length===0
-        ? <div className="empty-state">No {tab==='all'?'':tab} shift requests found.</div>
+
+      {filtered.length === 0
+        ? <div className="empty-state">No {tab === 'all' ? '' : tab} shift requests found.</div>
         : <div style={{display:'flex',flexDirection:'column',gap:12}}>
-          {shown.map(r=>{
-            const cs=SHIFT_TYPES[r.currentShift], rs=SHIFT_TYPES[r.requestedShift]
+          {filtered.map(r => {
+            const cs = SHIFT_TYPES[r.currentShift], rs = SHIFT_TYPES[r.requestedShift]
             return (
               <div key={r.id} className={`req-card req-${r.status}`}>
                 <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10,flexWrap:'wrap',gap:8}}>
@@ -47,7 +107,7 @@ export function ShiftRequests({ toast, storeData }) {
                     <span style={{fontWeight:700,fontSize:14}}>{r.userName||'?'}</span>
                     <span style={{fontSize:12,color:'var(--t2)'}}>{r.userDept}</span>
                   </div>
-                  <span className={`badge badge-${r.status==='approved'?'green':r.status==='rejected'?'red':'amber'}`}>{r.status}</span>
+                  <span className={`badge badge-${r.status==='approved'?'green':r.status==='rejected'?'red':r.status==='cancelled'?'gray':'amber'}`}>{r.status}</span>
                 </div>
                 <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:8,flexWrap:'wrap'}}>
                   <div style={{background:'var(--s2)',borderRadius:6,padding:'4px 10px',fontSize:12}}>
@@ -69,20 +129,20 @@ export function ShiftRequests({ toast, storeData }) {
                 <div style={{fontSize:13,color:'var(--t2)',marginBottom:8,fontStyle:'italic'}}>
                   Agent reason: "{r.reason}"
                 </div>
-                {r.status==='pending'&&(
+                {r.status === 'pending' && (
                   <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',borderTop:'1px solid var(--border)',paddingTop:10,marginTop:4}}>
                     <input type="text" placeholder="Optional admin note…"
-                      value={notes[r.id]||''}
-                      onChange={e=>setNotes(p=>({...p,[r.id]:e.target.value}))}
+                      value={notes[r.id]||''} onChange={e=>setNotes(p=>({...p,[r.id]:e.target.value}))}
                       style={{flex:1,minWidth:180}}/>
                     <button className="btn btn-success btn-sm" onClick={()=>act(r.id,'approved')} disabled={saving}>✓ Approve</button>
                     <button className="btn btn-danger  btn-sm" onClick={()=>act(r.id,'rejected')} disabled={saving}>✕ Reject</button>
+                    <button className="btn btn-sm btn-outline" onClick={()=>handleCancel(r.id)} disabled={saving}>⊘ Cancel</button>
                   </div>
                 )}
-                {r.adminNote&&<div style={{fontSize:12,color:'var(--green)',marginTop:6}}>Admin note: {r.adminNote}</div>}
+                {r.adminNote && <div style={{fontSize:12,color:'var(--green)',marginTop:6}}>Admin note: {r.adminNote}</div>}
                 <div style={{fontSize:10,color:'var(--t3)',marginTop:6}}>
                   Submitted: {r.submittedAt?.slice(0,16)}
-                  {r.actionAt&&` · Actioned: ${r.actionAt.slice(0,16)}`}
+                  {r.actionAt && ` · Actioned: ${r.actionAt.slice(0,16)}`}
                 </div>
               </div>
             )
