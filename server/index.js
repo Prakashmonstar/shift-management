@@ -35,7 +35,7 @@ if (process.env.NODE_ENV === 'production') {
 
 // ── AUTO SEED (runs every startup, skips if data exists) ─────
 const SEED_USERS = [
-  { employeeId:'1001', name:'Admin',          email:'admin@shift.com',       password:'admin123', role:'admin',  dept:'Management', defaultShift:'MC',  highlight:'' },
+  { employeeId:'1001', name:'Admin',          email:'prakashpks4633@gmail.com',       password:'Pks123@', role:'admin',  dept:'Management', defaultShift:'MC',  highlight:'' },
   { employeeId:'1002', name:'Jothika',         email:'jothika@shift.com',     password:'pass123',  role:'agent',  dept:'Support',    defaultShift:'S4',  highlight:'' },
   { employeeId:'1003', name:'Lingajothi',      email:'lingajothi@shift.com',  password:'pass123',  role:'agent',  dept:'Support',    defaultShift:'S4',  highlight:'' },
   { employeeId:'1004', name:'Nisha',           email:'nisha@shift.com',       password:'pass123',  role:'agent',  dept:'Support',    defaultShift:'AC',  highlight:'' },
@@ -85,7 +85,7 @@ async function autoSeed() {
       process.stdout.write('.')
     }
     console.log(`\n✅ Seeded ${SEED_USERS.length} users automatically!`)
-    console.log('   Admin : admin@shift.com / admin123')
+    console.log('   Admin : prakashpks4633@gmail.com / Pks123@')
     console.log('   Agents: (name)@shift.com / pass123')
   } catch (err) {
     console.error('❌ Auto-seed error:', err.message)

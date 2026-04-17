@@ -13,4 +13,8 @@ const userSchema = new mongoose.Schema({
   profilePhoto: { type: String, default: '' },
 }, { timestamps: true })
 
+<<<<<<< HEAD
 module.exports = mongoose.model('User', userSchema)
+=======
+module.exports = mongoose.model('User', userSchema)
+>>>>>>> 19554c3b5960310184e6a75bf65f3601e97e7674

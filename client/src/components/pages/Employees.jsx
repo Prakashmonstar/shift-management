@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 // client/src/components/pages/Employees.jsx
+=======
+>>>>>>> 19554c3b5960310184e6a75bf65f3601e97e7674
 import React, { useState, useRef } from 'react'
 import { SHIFT_TYPES, addUser, updateUser, deleteUser, updateLeaveStatus, changePassword, cancelLeave, updateProfile } from '../../data/store'
 import { exportLeavesExcel, exportMonthlyReportExcel, exportShiftRequestsExcel } from '../../data/excelExport'

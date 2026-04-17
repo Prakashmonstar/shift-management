@@ -33,6 +33,20 @@ export function exportLeavesExcel(leaves, label) {
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, 'Leaves')
   dl(wb, `leaves_${label||new Date().toISOString().slice(0,10)}.xlsx`)
+<<<<<<< HEAD
+}
+
+// Monthly report — schedulesByWeek = { weekKey: { userId: { dateStr: code } } }
+export function exportMonthlyReportExcel(month, agents, schedulesByWeek, leaves) {
+  const rows = buildMonthlyReportRows(month, agents, schedulesByWeek, leaves)
+  const ws = XLSX.utils.aoa_to_sheet(rows)
+  const daysInMonth = rows[0].length - 4  // subtract empid,name,dept,default
+  styleSheet(ws, [8,22,12,20,...Array(daysInMonth).fill(14),8,8,8])
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, `Report ${month}`)
+  dl(wb, `monthly_report_${month}.xlsx`)
+=======
+>>>>>>> 19554c3b5960310184e6a75bf65f3601e97e7674
 }
 
 // Monthly report — schedulesByWeek = { weekKey: { userId: { dateStr: code } } }
