@@ -1,3 +1,4 @@
+// server/routes/schedules.js
 const router   = require('express').Router()
 const Schedule = require('../models/Schedule')
 const Leave    = require('../models/Leave')

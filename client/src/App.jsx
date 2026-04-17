@@ -1,3 +1,4 @@
+// client/src/App.jsx
 import React, { useState, useCallback } from 'react'
 import { initStore, getSession, logout } from './data/store'
 import { useStore } from './data/useStore'

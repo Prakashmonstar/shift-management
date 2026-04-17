@@ -1,3 +1,4 @@
+// server/routes/leaves.js
 const router = require('express').Router()
 const Leave  = require('../models/Leave')
 const User   = require('../models/User')

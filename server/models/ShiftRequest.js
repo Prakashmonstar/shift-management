@@ -1,3 +1,4 @@
+// server/models/ShiftRequest.js
 const mongoose = require('mongoose')
 
 const shiftRequestSchema = new mongoose.Schema({

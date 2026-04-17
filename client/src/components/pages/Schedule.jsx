@@ -1,3 +1,4 @@
+// client/src/components/pages/Schedule.jsx
 import React, { useState, useEffect } from 'react'
 import {
   SHIFT_TYPES, getWeekDates, formatDate, getDayName,

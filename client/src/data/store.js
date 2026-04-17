@@ -1,34 +1,38 @@
-// ─── SHIFT TYPES ──────────────────────────────────────────────
+// client/src/data/store.js
+
+// ─── SHIFT TYPES ─────────────────────────────────────────────
 export const SHIFT_TYPES = {
-  MC:    { label: '7:00 AM - 3:30 PM - Call',          start: '07:00', end: '15:30', minAgents: 4, category: 'Morning',   color: '#16a34a', textColor: '#fff' },
-  MR:    { label: '7:00 AM - 3:30 PM - Reporting',     start: '07:00', end: '15:30', minAgents: 2, category: 'Morning',   color: '#15803d', textColor: '#fff' },
-  BC:    { label: '7:00 AM - 3:30 PM - Biopsy',        start: '07:00', end: '15:30', minAgents: 1, category: 'Morning',   color: '#0d9488', textColor: '#fff' },
-  S4:    { label: '9:00 AM - 5:30 PM - General',       start: '09:00', end: '17:30', minAgents: 2, category: 'General',   color: '#0891b2', textColor: '#fff' },
-  BS:    { label: '9:00 AM - 5:30 PM - Biopsy',        start: '09:00', end: '17:30', minAgents: 1, category: 'General',   color: '#0e7490', textColor: '#fff' },
-  AC:    { label: '11:30 AM - 8:00 PM - Call',         start: '11:30', end: '20:00', minAgents: 7, category: 'Afternoon', color: '#2563eb', textColor: '#fff' },
-  AR:    { label: '11:30 AM - 8:00 PM - Reporting',    start: '11:30', end: '20:00', minAgents: 2, category: 'Afternoon', color: '#1d4ed8', textColor: '#fff' },
-  BA:    { label: '11:30 AM - 8:00 PM - Biopsy',       start: '11:30', end: '20:00', minAgents: 1, category: 'Afternoon', color: '#7c3aed', textColor: '#fff' },
-  S6:    { label: '12:30 PM - 9:00 PM',                start: '12:30', end: '21:00', minAgents: 2, category: 'Afternoon', color: '#b45309', textColor: '#fff' },
-  EC:    { label: '2:30 PM - 11:00 PM - Call',         start: '14:30', end: '23:00', minAgents: 3, category: 'Evening',   color: '#9333ea', textColor: '#fff' },
-  ER:    { label: '2:30 PM - 11:00 PM - Reporting',    start: '14:30', end: '23:00', minAgents: 1, category: 'Evening',   color: '#6d28d9', textColor: '#fff' },
-  S75:   { label: '7:30 PM - 4:00 AM',                 start: '19:30', end: '04:00', minAgents: 1, category: 'Night',     color: '#be185d', textColor: '#fff' },
-  S5:    { label: '10:30 PM - 7:00 AM',                start: '22:30', end: '07:00', minAgents: 1, category: 'Night',     color: '#374151', textColor: '#fff' },
-  COMP:  { label: 'Comp Off',                          start: null,    end: null,    minAgents: 0, category: 'Off',       color: '#dc2626', textColor: '#fff' },
-  LEAVE: { label: 'Leave',                             start: null,    end: null,    minAgents: 0, category: 'Off',       color: '#ea580c', textColor: '#fff' },
-  OFF:   { label: 'Week Off',                          start: null,    end: null,    minAgents: 0, category: 'Off',       color: '#6b7280', textColor: '#fff' },
+  MC:    { label: '7:00 AM - 3:30 PM (Morning Call)',    color: '#16a34a', textColor: '#fff', start: '07:00', end: '15:30', minAgents: 4,  category: 'Morning'   },
+  MR:    { label: '7:00 AM - 3:30 PM (Reporting)',       color: '#15803d', textColor: '#fff', start: '07:00', end: '15:30', minAgents: 2,  category: 'Morning'   },
+  BC:    { label: '7:00 AM - 3:30 PM (Biopsy)',          color: '#0d9488', textColor: '#fff', start: '07:00', end: '15:30', minAgents: 1,  category: 'Morning'   },
+  S4:    { label: '9:00 AM - 5:30 PM (General)',         color: '#0891b2', textColor: '#fff', start: '09:00', end: '17:30', minAgents: 2,  category: 'General'   },
+  BS:    { label: '9:00 AM - 5:30 PM (Biopsy)',          color: '#0e7490', textColor: '#fff', start: '09:00', end: '17:30', minAgents: 1,  category: 'General'   },
+  AC:    { label: '11:30 AM - 8:00 PM (Call)',           color: '#2563eb', textColor: '#fff', start: '11:30', end: '20:00', minAgents: 7,  category: 'Afternoon' },
+  AR:    { label: '11:30 AM - 8:00 PM (Reporting)',      color: '#1d4ed8', textColor: '#fff', start: '11:30', end: '20:00', minAgents: 2,  category: 'Afternoon' },
+  BA:    { label: '11:30 AM - 8:00 PM (Biopsy)',         color: '#7c3aed', textColor: '#fff', start: '11:30', end: '20:00', minAgents: 1,  category: 'Afternoon' },
+  S6:    { label: '12:30 PM - 9:00 PM',                  color: '#b45309', textColor: '#fff', start: '12:30', end: '21:00', minAgents: 2,  category: 'Afternoon' },
+  EC:    { label: '2:30 PM - 11:00 PM (Call)',           color: '#9333ea', textColor: '#fff', start: '14:30', end: '23:00', minAgents: 3,  category: 'Evening'   },
+  ER:    { label: '2:30 PM - 11:00 PM (Reporting)',      color: '#6d28d9', textColor: '#fff', start: '14:30', end: '23:00', minAgents: 1,  category: 'Evening'   },
+  S75:   { label: '7:30 PM - 4:00 AM',                   color: '#be185d', textColor: '#fff', start: '19:30', end: '04:00', minAgents: 1,  category: 'Night'     },
+  S5:    { label: '10:30 PM - 7:00 AM',                  color: '#374151', textColor: '#fff', start: '22:30', end: '07:00', minAgents: 1,  category: 'Night'     },
+  COMP:  { label: 'Comp Off',                            color: '#dc2626', textColor: '#fff', start: null,    end: null,    minAgents: 0,  category: 'Off'       },
+  LEAVE: { label: 'Leave',                               color: '#ea580c', textColor: '#fff', start: null,    end: null,    minAgents: 0,  category: 'Off'       },
+  OFF:   { label: 'Week Off',                            color: '#6b7280', textColor: '#fff', start: null,    end: null,    minAgents: 0,  category: 'Off'       },
 }
 
 export const otpStore = {}
 
 // ─── API helper ───────────────────────────────────────────────
-const BASE = '/api'
-
 function getToken() { return localStorage.getItem('sf_jwt') || '' }
 
 export async function apiFetch(path, options = {}) {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await fetch(`/api${path}`, {
     ...options,
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}`, ...(options.headers || {}) },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${getToken()}`,
+      ...(options.headers || {}),
+    },
     body: options.body ? JSON.stringify(options.body) : undefined,
   })
   const data = await res.json()
@@ -40,7 +44,7 @@ export async function apiFetch(path, options = {}) {
 export async function login(email, password) {
   try {
     const data = await apiFetch('/auth/login', { method: 'POST', body: { email, password } })
-    localStorage.setItem('sf_jwt', data.token)
+    localStorage.setItem('sf_jwt',  data.token)
     localStorage.setItem('sf_user', JSON.stringify(data.user))
     return { ok: true, user: data.user }
   } catch (err) { return { ok: false, msg: err.message } }
@@ -56,41 +60,37 @@ export function getSession() {
   catch { return null }
 }
 
-export async function changePassword(userId, oldPwd, newPwd) {
+export async function changePassword(_uid, oldPwd, newPwd) {
   try {
     await apiFetch('/auth/change-password', { method: 'PUT', body: { oldPassword: oldPwd, newPassword: newPwd } })
     return { ok: true }
   } catch (err) { return { ok: false, msg: err.message } }
 }
 
-// Update profile including photo
 export async function updateProfile(updates) {
   try {
     const data = await apiFetch('/auth/profile', { method: 'PUT', body: updates })
-    if (data.ok && data.user) {
-      localStorage.setItem('sf_user', JSON.stringify(data.user))
-    }
+    if (data.ok && data.user) localStorage.setItem('sf_user', JSON.stringify(data.user))
     return { ok: true, user: data.user }
   } catch (err) { return { ok: false, msg: err.message } }
 }
 
 // ─── USERS ────────────────────────────────────────────────────
-export async function fetchUsers() { const data = await apiFetch('/users'); return data.users || [] }
-export async function fetchAgents() { const data = await apiFetch('/users/agents'); return data.users || [] }
-export async function addUser(user) { const data = await apiFetch('/users', { method: 'POST', body: user }); return data.user }
-export async function updateUser(id, changes) { const data = await apiFetch(`/users/${id}`, { method: 'PUT', body: changes }); return data.user }
-export async function deleteUser(id) { await apiFetch(`/users/${id}`, { method: 'DELETE' }) }
-export async function getUserByEmail(email) { const users = await fetchUsers(); return users.find(u => u.email.toLowerCase() === email.toLowerCase()) }
+export async function fetchUsers()            { const d = await apiFetch('/users');        return d.users || [] }
+export async function fetchAgents()           { const d = await apiFetch('/users/agents'); return d.users || [] }
+export async function addUser(user)           { const d = await apiFetch('/users', { method: 'POST', body: user }); return d.user }
+export async function updateUser(id, changes) { const d = await apiFetch(`/users/${id}`, { method: 'PUT', body: changes }); return d.user }
+export async function deleteUser(id)          { await apiFetch(`/users/${id}`, { method: 'DELETE' }) }
 
 // ─── DATE / WEEK HELPERS ──────────────────────────────────────
 export function getWeekKey(date) {
-  const d = new Date(date); const day = d.getDay()
+  const d = new Date(date), day = d.getDay()
   const mon = new Date(d); mon.setDate(d.getDate() - (day === 0 ? 6 : day - 1))
   return mon.toISOString().slice(0, 10)
 }
 export function getCurrentWeekKey() { return getWeekKey(new Date()) }
-export function getNextWeekKey(k) { const d = new Date(k); d.setDate(d.getDate() + 7); return d.toISOString().slice(0, 10) }
-export function getPrevWeekKey(k) { const d = new Date(k); d.setDate(d.getDate() - 7); return d.toISOString().slice(0, 10) }
+export function getNextWeekKey(k)   { const d = new Date(k); d.setDate(d.getDate() + 7); return d.toISOString().slice(0, 10) }
+export function getPrevWeekKey(k)   { const d = new Date(k); d.setDate(d.getDate() - 7); return d.toISOString().slice(0, 10) }
 export function getWeekDates(weekKey) {
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekKey); d.setDate(d.getDate() + i); return d.toISOString().slice(0, 10)
@@ -98,9 +98,11 @@ export function getWeekDates(weekKey) {
 }
 export function formatDate(dateStr) {
   const d = new Date(dateStr)
-  return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0')
+  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`
 }
-export function getDayName(dateStr) { return new Date(dateStr).toLocaleDateString('en-GB', { weekday: 'short' }) }
+export function getDayName(dateStr) {
+  return new Date(dateStr).toLocaleDateString('en-GB', { weekday: 'short' })
+}
 
 // ─── SCHEDULE ─────────────────────────────────────────────────
 export async function fetchWeekSchedule(weekKey) {
@@ -108,51 +110,75 @@ export async function fetchWeekSchedule(weekKey) {
   return { status: data.status, shifts: data.shifts || {} }
 }
 export async function setAgentShift(weekKey, userId, dateStr, shiftCode, prevCode) {
-  const data = await apiFetch(`/schedules/${weekKey}/shift`, { method: 'PUT', body: { userId, dateStr, shiftCode, prevCode } })
-  return data
+  return await apiFetch(`/schedules/${weekKey}/shift`, { method: 'PUT', body: { userId, dateStr, shiftCode, prevCode } })
 }
-export async function bulkSetWeek(weekKey, shifts) { await apiFetch(`/schedules/${weekKey}/bulk`, { method: 'PUT', body: { shifts } }) }
-export async function setWeekStatus(weekKey, status) { await apiFetch(`/schedules/${weekKey}/status`, { method: 'PUT', body: { status } }) }
-export async function autoGenerateWeek(weekKey) { await apiFetch(`/schedules/${weekKey}/auto-generate`, { method: 'POST' }) }
+export async function bulkSetWeek(weekKey, shifts) {
+  await apiFetch(`/schedules/${weekKey}/bulk`, { method: 'PUT', body: { shifts } })
+}
+export async function setWeekStatus(weekKey, status) {
+  await apiFetch(`/schedules/${weekKey}/status`, { method: 'PUT', body: { status } })
+}
+export async function autoGenerateWeek(weekKey) {
+  await apiFetch(`/schedules/${weekKey}/auto-generate`, { method: 'POST' })
+}
 
 // ─── LEAVES ───────────────────────────────────────────────────
 export async function fetchLeaves(month) {
   const qs = month ? `?month=${month}` : ''
-  const data = await apiFetch(`/leaves${qs}`)
-  return data.leaves || []
+  const d  = await apiFetch(`/leaves${qs}`)
+  return d.leaves || []
 }
-export async function applyLeave(req) { const data = await apiFetch('/leaves', { method: 'POST', body: req }); return data.leave }
-export async function updateLeaveStatus(id, status, remark = '') { await apiFetch(`/leaves/${id}/status`, { method: 'PUT', body: { status, remark } }) }
-export async function cancelLeave(id) { await apiFetch(`/leaves/${id}`, { method: 'DELETE' }) }
+export async function applyLeave(req) {
+  const d = await apiFetch('/leaves', { method: 'POST', body: req })
+  return d.leave
+}
+export async function updateLeaveStatus(id, status, remark = '') {
+  await apiFetch(`/leaves/${id}/status`, { method: 'PUT', body: { status, remark } })
+}
+export async function cancelLeave(id) {
+  await apiFetch(`/leaves/${id}`, { method: 'DELETE' })
+}
 
 // ─── SHIFT REQUESTS ───────────────────────────────────────────
 export async function fetchShiftRequests(month) {
   const qs = month ? `?month=${month}` : ''
-  const data = await apiFetch(`/shift-requests${qs}`)
-  return data.requests || []
+  const d  = await apiFetch(`/shift-requests${qs}`)
+  return d.requests || []
 }
-export async function submitShiftRequest(req) { const data = await apiFetch('/shift-requests', { method: 'POST', body: req }); return data.request }
-export async function updateShiftRequestStatus(id, status, adminNote = '') { await apiFetch(`/shift-requests/${id}/status`, { method: 'PUT', body: { status, adminNote } }) }
-export async function cancelShiftRequest(id) { await apiFetch(`/shift-requests/${id}`, { method: 'DELETE' }) }
+export async function submitShiftRequest(req) {
+  const d = await apiFetch('/shift-requests', { method: 'POST', body: req })
+  return d.request
+}
+export async function updateShiftRequestStatus(id, status, adminNote = '') {
+  await apiFetch(`/shift-requests/${id}/status`, { method: 'PUT', body: { status, adminNote } })
+}
+export async function cancelShiftRequest(id) {
+  await apiFetch(`/shift-requests/${id}`, { method: 'DELETE' })
+}
 
-// ─── COVERAGE ANALYSIS ────────────────────────────────────────
+// ─── COVERAGE ─────────────────────────────────────────────────
 export function analyzeWeekCoverage(weekKey, schedule, agents, leaves) {
-  const dates = getWeekDates(weekKey)
+  const dates    = getWeekDates(weekKey)
   const warnings = []
   const coverage = {}
   Object.keys(SHIFT_TYPES).forEach(sc => { coverage[sc] = {}; dates.forEach(d => { coverage[sc][d] = 0 }) })
+
   ;(agents || []).forEach(agent => {
+    const id = agent._id || agent.id
     dates.forEach(dateStr => {
-      const onLeave = (leaves || []).some(l => (l.userId === agent._id || l.userId === agent.id) ? dateStr >= l.from && dateStr <= l.to : false)
-      const code = onLeave ? 'LEAVE' : (schedule?.[agent._id || agent.id]?.[dateStr] || agent.defaultShift || 'MC')
-      if (coverage[code]) coverage[code][dateStr]++
+      const onLeave = (leaves || []).some(l =>
+        (l.userId === id) && l.status === 'approved' && dateStr >= l.from && dateStr <= l.to
+      )
+      const code = onLeave ? 'LEAVE' : (schedule?.[id]?.[dateStr] || agent.defaultShift || 'MC')
+      if (coverage[code]) coverage[code][dateStr] = (coverage[code][dateStr] || 0) + 1
     })
   })
+
   dates.forEach(dateStr => {
-    const dn = getDayName(dateStr); const isWE = dn === 'Sat' || dn === 'Sun'
+    const dn = getDayName(dateStr), isWE = dn === 'Sat' || dn === 'Sun'
     Object.entries(SHIFT_TYPES).forEach(([sc, def]) => {
       if (def.minAgents === 0) return
-      const count = coverage[sc]?.[dateStr] || 0
+      const count    = coverage[sc]?.[dateStr] || 0
       const required = isWE ? Math.max(1, def.minAgents - 1) : def.minAgents
       if (count < required) warnings.push({ dateStr, shiftCode: sc, count, required, dn })
     })
@@ -160,83 +186,5 @@ export function analyzeWeekCoverage(weekKey, schedule, agents, leaves) {
   return { coverage, warnings }
 }
 
-// ─── EXCEL ROW BUILDERS ───────────────────────────────────────
-export function buildScheduleRows(weekKey, agents, schedule, leaves) {
-  const dates = getWeekDates(weekKey)
-  const headers = ['Emp ID', 'Employee Name', 'Department', 'Default Shift', ...dates.map(d => `${getDayName(d)} ${formatDate(d)}`)]
-  const rows = [headers]
-  ;(agents || []).forEach(agent => {
-    const id = agent._id || agent.id
-    const row = [agent.employeeId, agent.name, agent.dept || 'Support', SHIFT_TYPES[agent.defaultShift]?.label || agent.defaultShift]
-    dates.forEach(dateStr => {
-      const onLeave = (leaves || []).some(l => (l.userId === id) && dateStr >= l.from && dateStr <= l.to)
-      const code = onLeave ? 'LEAVE' : (schedule?.[id]?.[dateStr] || agent.defaultShift)
-      row.push(SHIFT_TYPES[code]?.label || code)
-    })
-    rows.push(row)
-  })
-  return rows
-}
-
-export function buildShiftRequestRows(requests) {
-  const headers = ['Agent Name','Emp ID','Week','Date','Day','Current Shift','Requested Shift','Reason','Status','Admin Note','Submitted','Actioned']
-  const rows = [headers]
-  ;(requests || []).forEach(r => {
-    rows.push([
-      r.userName || '?', r.userEmpId || '?', r.weekKey, r.dateStr, getDayName(r.dateStr),
-      SHIFT_TYPES[r.currentShift]?.label || r.currentShift,
-      SHIFT_TYPES[r.requestedShift]?.label || r.requestedShift,
-      r.reason, r.status, r.adminNote || '',
-      r.submittedAt?.slice(0,16) || '', r.actionAt?.slice(0,16) || '',
-    ])
-  })
-  return rows
-}
-
-export function buildLeavesRows(leaves) {
-  const headers = ['Agent Name','Emp ID','Leave Type','From','To','Days','Reason','Status','Applied','Actioned','Remark']
-  const rows = [headers]
-  ;(leaves || []).forEach(l => {
-    const days = Math.ceil((new Date(l.to) - new Date(l.from)) / 86400000) + 1
-    rows.push([
-      l.userName || '?', l.userEmpId || '?', l.leaveType, l.from, l.to, days,
-      l.reason, l.status, l.appliedAt?.slice(0,10) || '', l.actionAt?.slice(0,10) || '', l.remark || '',
-    ])
-  })
-  return rows
-}
-
-// Monthly report builder — groups schedules by month
-export function buildMonthlyReportRows(month, agents, schedulesByWeek, leaves) {
-  // month = 'YYYY-MM'
-  const [y, m] = month.split('-')
-  const daysInMonth = new Date(parseInt(y), parseInt(m), 0).getDate()
-  const allDates = Array.from({ length: daysInMonth }, (_, i) => {
-    const day = String(i+1).padStart(2,'0')
-    return `${y}-${m}-${day}`
-  })
-  const headers = ['Emp ID', 'Employee Name', 'Dept', 'Default Shift', ...allDates.map(d => `${getDayName(d)} ${formatDate(d)}`), 'Work Days', 'Off Days', 'Leave Days']
-  const rows = [headers]
-  ;(agents || []).forEach(agent => {
-    const id = agent._id || agent.id
-    const row = [agent.employeeId, agent.name, agent.dept || 'Support', SHIFT_TYPES[agent.defaultShift]?.label || agent.defaultShift]
-    let workDays = 0, offDays = 0, leaveDays = 0
-    allDates.forEach(dateStr => {
-      const onLeave = (leaves || []).some(l => (l.userId === id) && l.status === 'approved' && dateStr >= l.from && dateStr <= l.to)
-      // Find which week this date belongs to
-      const weekKey = getWeekKey(dateStr)
-      const weekSched = schedulesByWeek[weekKey]
-      let code = onLeave ? 'LEAVE' : (weekSched?.[id]?.[dateStr] || agent.defaultShift)
-      row.push(SHIFT_TYPES[code]?.label || code)
-      if (code === 'LEAVE') leaveDays++
-      else if (code === 'OFF' || code === 'COMP') offDays++
-      else workDays++
-    })
-    row.push(workDays, offDays, leaveDays)
-    rows.push(row)
-  })
-  return rows
-}
-
-export function initStore() {}
+export function initStore()       {}
 export function resetToDefaults() { logout(); window.location.reload() }

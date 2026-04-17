@@ -1,3 +1,4 @@
+// server/models/Leave.js
 const mongoose = require('mongoose')
 
 const leaveSchema = new mongoose.Schema({

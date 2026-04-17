@@ -1,23 +1,24 @@
-// client/src/components/layout/Shell.jsx  — unchanged from v1
+// client/src/components/layout/Shell.jsx
 import React, { useState } from 'react'
 import { logout as storeLogout } from '../../data/store'
 
 const ADMIN_NAV = [
-  { id:'dashboard',     icon:'▦',  label:'Dashboard'      },
-  { id:'schedule',      icon:'📅', label:'Schedule'       },
-  { id:'coverage',      icon:'📊', label:'Coverage'       },
-  { id:'shift-requests',icon:'🔄', label:'Shift Requests' },
-  { id:'leaves',        icon:'🌿', label:'Leaves'         },
-  { id:'employees',     icon:'👥', label:'Employees'      },
-  { id:'settings',      icon:'⚙',  label:'Settings'       },
-  { id:'profile',       icon:'👤', label:'Profile'        },
+  { id:'dashboard',      icon:'▦',  label:'Dashboard'       },
+  { id:'schedule',       icon:'📅', label:'Schedule'        },
+  { id:'coverage',       icon:'📊', label:'Coverage'        },
+  { id:'shift-requests', icon:'🔄', label:'Shift Requests'  },
+  { id:'leaves',         icon:'🌿', label:'Leaves'          },
+  { id:'employees',      icon:'👥', label:'Employees'       },
+  { id:'monthly-report', icon:'📈', label:'Monthly Report'  },
+  { id:'settings',       icon:'⚙',  label:'Settings'        },
+  { id:'profile',        icon:'👤', label:'Profile'         },
 ]
 const AGENT_NAV = [
-  { id:'my-schedule',  icon:'📅', label:'My Schedule'  },
-  { id:'shift-request',icon:'🔄', label:'Request Shift'},
-  { id:'apply-leave',  icon:'🌿', label:'Apply Leave'  },
-  { id:'my-leaves',    icon:'📋', label:'My Leaves'    },
-  { id:'profile',      icon:'👤', label:'Profile'      },
+  { id:'my-schedule',   icon:'📅', label:'My Schedule'   },
+  { id:'shift-request', icon:'🔄', label:'Request Shift' },
+  { id:'apply-leave',   icon:'🌿', label:'Apply Leave'   },
+  { id:'my-leaves',     icon:'📋', label:'My Leaves'     },
+  { id:'profile',       icon:'👤', label:'Profile'       },
 ]
 
 function ini(n=''){return n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
@@ -25,7 +26,6 @@ function ini(n=''){return n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperC
 export function Shell({ user, page, onNav, pendingLeaves, pendingRequests, children }) {
   const [open, setOpen] = useState(true)
   const nav = user.role==='admin' ? ADMIN_NAV : AGENT_NAV
-
   const handleLogout = () => { storeLogout(); window.location.reload() }
 
   return (
@@ -51,8 +51,10 @@ export function Shell({ user, page, onNav, pendingLeaves, pendingRequests, child
         </nav>
         <div className="sb-footer">
           <div className="sb-user">
-            <div className={`av ${user.highlight==='orange'?'av-orange':user.role==='admin'?'av-blue':'av-gray'}`}
-              style={{width:32,height:32,fontSize:12,flexShrink:0}}>{ini(user.name)}</div>
+            {user.profilePhoto
+              ? <img src={user.profilePhoto} alt={user.name} style={{width:32,height:32,borderRadius:'50%',objectFit:'cover',flexShrink:0,border:'2px solid var(--border)'}}/>
+              : <div className={`av ${user.highlight==='orange'?'av-orange':user.role==='admin'?'av-blue':'av-gray'}`} style={{width:32,height:32,fontSize:12,flexShrink:0}}>{ini(user.name)}</div>
+            }
             {open&&<div style={{overflow:'hidden'}}>
               <div className="sb-uname">{user.name}</div>
               <div className={`sb-urole ${user.role==='admin'?'role-admin':'role-agent'}`}>{user.role}</div>
