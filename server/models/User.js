@@ -12,7 +12,6 @@ const userSchema = new mongoose.Schema({
   highlight:    { type: String, default: '' },
   isActive:     { type: Boolean, default: true },
   profilePhoto: { type: String, default: '' },
-  profilePhoto: { type: String, default: "" },
 }, { timestamps: true })
 
 module.exports = mongoose.model('User', userSchema)
