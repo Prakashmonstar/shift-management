@@ -67,13 +67,7 @@ export async function changePassword(_uid, oldPwd, newPwd) {
   } catch (err) { return { ok: false, msg: err.message } }
 }
 
-export async function updateProfile(updates) {
-  try {
-    const data = await apiFetch('/auth/profile', { method: 'PUT', body: updates })
-    if (data.ok && data.user) localStorage.setItem('sf_user', JSON.stringify(data.user))
-    return { ok: true, user: data.user }
-  } catch (err) { return { ok: false, msg: err.message } }
-}
+
 
 // ─── USERS ────────────────────────────────────────────────────
 export async function fetchUsers()            { const d = await apiFetch('/users');        return d.users || [] }
@@ -187,4 +181,19 @@ export function analyzeWeekCoverage(weekKey, schedule, agents, leaves) {
 }
 
 export function initStore()       {}
+
+
+
+export async function updateProfile(updates) {
+  try {
+    const data = await apiFetch('/auth/profile', { method: 'PUT', body: updates })
+    if (data.ok && data.user) {
+      localStorage.setItem('sf_user', JSON.stringify(data.user))
+      return { ok: true, user: data.user }
+    }
+    return { ok: false, msg: data.msg || 'Failed to update profile' }
+  } catch (err) { 
+    return { ok: false, msg: err.message } 
+  }
+}
 export function resetToDefaults() { logout(); window.location.reload() }

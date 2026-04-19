@@ -428,15 +428,22 @@ export function Profile({ user, toast, onRefresh, onUserUpdate, storeData }) {
   }
 
   const saveProfile = async (e) => {
-    e.preventDefault()
-    setSaving(true)
-    try {
-      const res = await updateProfile({ name: name.trim(), profilePhoto: photo })
-      if (res.ok) { toast('Profile updated!','success'); onUserUpdate() }
-      else toast(res.msg,'danger')
-    } catch(e) { toast(e.message,'danger') }
-    setSaving(false)
+  e.preventDefault()
+  setSaving(true)
+  try {
+    const res = await updateProfile({ name: name.trim(), profilePhoto: photo })
+    if (res.ok) { 
+      toast('Profile updated!','success')
+      onUserUpdate?.(res.user)
+      onRefresh?.()
+    }
+    else toast(res.msg,'danger')
+  } catch(e) { 
+    toast(e.message,'danger') 
   }
+  setSaving(false)
+}
+
 
   const changePwd = async (e) => {
     e.preventDefault()

@@ -73,23 +73,23 @@ router.get('/me', protect, async (req, res) => {
 })
 
 // ── PUT /api/auth/profile — supports profilePhoto ─────────────
-router.put('/profile', protect, async (req, res) => {
-  try {
-    const { name, email, profilePhoto } = req.body
-    const updates = {}
-    if (name !== undefined) updates.name = name
-    if (email !== undefined) updates.email = email.toLowerCase()
-    if (profilePhoto !== undefined) updates.profilePhoto = profilePhoto
-    const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true, runValidators: true })
-    const userObj = user.toObject()
-    delete userObj.password
-    const updated = { ...userObj, id: userObj._id.toString() }
-    // Update stored user in response so frontend can sync
-    res.json({ ok: true, user: updated })
-  } catch (err) {
-    res.status(500).json({ ok: false, msg: err.message })
-  }
-})
+// router.put('/profile', protect, async (req, res) => {
+//   try {
+//     const { name, email, profilePhoto } = req.body
+//     const updates = {}
+//     if (name !== undefined) updates.name = name
+//     if (email !== undefined) updates.email = email.toLowerCase()
+//     if (profilePhoto !== undefined) updates.profilePhoto = profilePhoto
+//     const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true, runValidators: true })
+//     const userObj = user.toObject()
+//     delete userObj.password
+//     const updated = { ...userObj, id: userObj._id.toString() }
+//     // Update stored user in response so frontend can sync
+//     res.json({ ok: true, user: updated })
+//   } catch (err) {
+//     res.status(500).json({ ok: false, msg: err.message })
+//   }
+// })
 
 router.put('/change-password', protect, async (req, res) => {
   try {
@@ -107,5 +107,35 @@ router.put('/change-password', protect, async (req, res) => {
     res.status(500).json({ ok: false, msg: err.message })
   }
 })
+router.put('/profile', protect, async (req, res) => {
+  try {
+    const { name, email, profilePhoto } = req.body
+    const updates = {}
+    
+    if (name !== undefined && name.trim()) updates.name = name.trim()
+    if (email !== undefined && email.trim()) updates.email = email.toLowerCase().trim()
+    
+    if (profilePhoto !== undefined) {
+      if (profilePhoto && profilePhoto.length > 5 * 1024 * 1024) {
+        return res.status(400).json({ ok: false, msg: 'Photo too large' })
+      }
+      updates.profilePhoto = profilePhoto
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      updates,
+      { new: true }
+    )
+
+    const userObj = user.toObject()
+    delete userObj.password
+    
+    res.json({ ok: true, user: userObj })
+  } catch (err) {
+    res.status(500).json({ ok: false, msg: err.message })
+  }
+})
+
 
 module.exports = router
